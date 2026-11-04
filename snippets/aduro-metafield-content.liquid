@@ -1,0 +1,26 @@
+{%- doc -%}
+  Renders a product metafield as HTML, based on its type.
+  Used by the Aduro PDP so text, multi-line, rich text and list metafields all render correctly.
+
+  @param {object} metafield - The metafield to render.
+
+  @example
+  {% render 'aduro-metafield-content', metafield: product.metafields.aduro.short_description %}
+{%- enddoc -%}
+
+{%- case metafield.type -%}
+  {%- when 'rich_text_field' -%}
+    {{- metafield | metafield_tag -}}
+  {%- when 'multi_line_text_field' -%}
+    <p>{{ metafield.value | escape | newline_to_br }}</p>
+  {%- when 'single_line_text_field' -%}
+    {{- metafield.value | escape -}}
+  {%- when 'list.single_line_text_field' -%}
+    <ul>
+      {%- for item in metafield.value -%}
+        <li>{{ item | escape }}</li>
+      {%- endfor -%}
+    </ul>
+  {%- else -%}
+    {{- metafield | metafield_tag -}}
+{%- endcase -%}

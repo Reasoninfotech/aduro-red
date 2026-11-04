@@ -3,9 +3,37 @@
   assign product_form_id = 'AduroPdp-ProductForm-' | append: section.id
   assign submit_button_id = 'AduroPdp-SubmitButton-' | append: section.id
 
-  assign rating = product.metafields.reviews.rating.value.rating | default: section.settings.rating | plus: 0
-  assign rating_count = product.metafields.reviews.rating_count | default: section.settings.reviews_count
+  # Per-product content lives in the "aduro" metafield namespace.
+  # A filled metafield wins; otherwise the common section setting is used.
+  assign mf = product.metafields.aduro
+
+  # Rating row
+  assign rating = mf.rating.value.rating | default: mf.rating.value | default: product.metafields.reviews.rating.value.rating | default: section.settings.rating | plus: 0
+  assign rating_count = mf.reviews_count.value | default: product.metafields.reviews.rating_count.value | default: section.settings.reviews_count
   assign rating_percent = rating | divided_by: 5.0 | times: 100 | at_most: 100
+  assign trusted_text = mf.trusted_text.value | escape | default: section.settings.trusted_text
+
+  # Experts
+  assign expert_title = mf.expert_title.value | escape | default: section.settings.expert_title
+  assign expert_subtitle = mf.expert_subtitle.value | escape | default: section.settings.expert_subtitle
+  assign expert_tooltip = mf.expert_tooltip.value | escape | default: section.settings.expert_tooltip
+  # list.file_reference (images)
+  assign expert_images = mf.expert_images.value
+
+  # Stats & features: list.single_line_text_field (or multi-line text), one "value|label" per entry
+  assign stat_items = mf.stats.value
+  if mf.stats.type == 'multi_line_text_field'
+    assign stat_items = mf.stats.value | newline_to_br | split: '<br />'
+  endif
+  assign feature_items = mf.features.value
+  if mf.features.type == 'multi_line_text_field'
+    assign feature_items = mf.features.value | newline_to_br | split: '<br />'
+  endif
+
+  # Guarantee
+  assign guarantee_title = mf.guarantee_title.value | escape | default: section.settings.guarantee_title
+  assign guarantee_text = mf.guarantee_text.value | escape | default: section.settings.guarantee_text
+  assign guarantee_icon = mf.guarantee_icon.value | default: section.settings.guarantee_icon
 
   if current_variant.available
     assign can_add_to_cart = true
@@ -18,9 +46,12 @@
     assign add_to_cart_text = 'products.product.sold_out' | t
   endif
 
-  assign short_description = section.settings.short_description
-  if short_description == blank and product.metafields.custom.short_description != blank
-    assign short_description = product.metafields.custom.short_description | metafield_tag
+  if mf.short_description != blank
+    capture short_description
+      render 'aduro-metafield-content', metafield: mf.short_description
+    endcapture
+  else
+    assign short_description = section.settings.short_description
   endif
   if short_description == blank
     assign short_description = product.description | strip_html | truncatewords: 32
@@ -185,14 +216,14 @@
               </span>
               <span class="apdp__rating-count">{{ rating_count }} {{ section.settings.reviews_label }}</span>
             </a>
-            {%- if section.settings.trusted_text != blank -%}
+            {%- if trusted_text != blank -%}
               <span class="apdp__rating-sep" aria-hidden="true"></span>
               <span class="apdp__trusted">
                 <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
                   <path fill="#2B7FE0" d="M8 .4l1.8 1.3 2.2-.2.8 2.1 2.1.8-.2 2.2L16 8l-1.3 1.8.2 2.2-2.1.8-.8 2.1-2.2-.2L8 15.6l-1.8-1.3-2.2.2-.8-2.1-2.1-.8.2-2.2L0 8l1.3-1.8-.2-2.2 2.1-.8.8-2.1 2.2.2z"/>
                   <path d="M5 8.2l2 2 4-4.2" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                {{ section.settings.trusted_text }}
+                {{ trusted_text }}
               </span>
             {%- endif -%}
           </div>
@@ -200,47 +231,68 @@
 
         <h1 class="apdp__title">{{ product.title | escape }}</h1>
 
-        {%- if section.settings.expert_title != blank -%}
+        {%- if expert_title != blank -%}
           <div class="apdp__experts">
             <div class="apdp__avatars" aria-hidden="true">
-              {%- for i in (1..3) -%}
-                {%- assign avatar_key = 'expert_image_' | append: i -%}
-                {%- assign avatar = section.settings[avatar_key] -%}
-                <span class="apdp__avatar">
-                  {%- if avatar != blank -%}
+              {%- if expert_images != blank -%}
+                {%- for avatar in expert_images limit: 5 -%}
+                  <span class="apdp__avatar">
                     {{ avatar | image_url: width: 120 | image_tag: loading: 'lazy', alt: '', width: 40, height: 40 }}
-                  {%- endif -%}
-                </span>
-              {%- endfor -%}
+                  </span>
+                {%- endfor -%}
+              {%- else -%}
+                {%- for i in (1..3) -%}
+                  {%- assign avatar_key = 'expert_image_' | append: i -%}
+                  {%- assign avatar = section.settings[avatar_key] -%}
+                  <span class="apdp__avatar">
+                    {%- if avatar != blank -%}
+                      {{ avatar | image_url: width: 120 | image_tag: loading: 'lazy', alt: '', width: 40, height: 40 }}
+                    {%- endif -%}
+                  </span>
+                {%- endfor -%}
+              {%- endif -%}
             </div>
             <div class="apdp__experts-text">
               <p class="apdp__experts-title">
-                {{ section.settings.expert_title }}
-                {%- if section.settings.expert_tooltip != blank -%}
+                {{ expert_title }}
+                {%- if expert_tooltip != blank -%}
                   <span
                     class="apdp__info"
                     tabindex="0"
                     role="note"
-                    aria-label="{{ section.settings.expert_tooltip | escape }}"
+                    aria-label="{{ expert_tooltip | strip_html | escape }}"
                   >
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                       <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.2"/>
                       <path d="M8 7v4.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
                       <circle cx="8" cy="4.8" r=".85" fill="currentColor"/>
                     </svg>
-                    <span class="apdp__tooltip" aria-hidden="true">{{ section.settings.expert_tooltip }}</span>
+                    <span class="apdp__tooltip" aria-hidden="true">{{ expert_tooltip }}</span>
                   </span>
                 {%- endif -%}
               </p>
-              {%- if section.settings.expert_subtitle != blank -%}
-                <p class="apdp__experts-sub">{{ section.settings.expert_subtitle }}</p>
+              {%- if expert_subtitle != blank -%}
+                <p class="apdp__experts-sub">{{ expert_subtitle }}</p>
               {%- endif -%}
             </div>
           </div>
         {%- endif -%}
 
         {%- assign stat_blocks = section.blocks | where: 'type', 'stat' -%}
-        {%- if stat_blocks.size > 0 -%}
+        {%- if stat_items != blank -%}
+          <div class="apdp__stats">
+            {%- for item in stat_items limit: 4 -%}
+              {%- assign parts = item | split: '|' -%}
+              {%- unless forloop.first -%}
+                <span class="apdp__stats-sep" aria-hidden="true"></span>
+              {%- endunless -%}
+              <div class="apdp__stat">
+                <span class="apdp__stat-value">{{ parts[0] | strip | escape }}</span>
+                <span class="apdp__stat-label">{{ parts[1] | strip | escape }}</span>
+              </div>
+            {%- endfor -%}
+          </div>
+        {%- elsif stat_blocks.size > 0 -%}
           <div class="apdp__stats">
             {%- for block in stat_blocks -%}
               {%- unless forloop.first -%}
@@ -351,7 +403,20 @@
         </div>
 
         {%- assign feature_blocks = section.blocks | where: 'type', 'feature' -%}
-        {%- if feature_blocks.size > 0 -%}
+        {%- if feature_items != blank -%}
+          <div class="apdp__features">
+            {%- for item in feature_items limit: 4 -%}
+              {%- assign parts = item | split: '|' -%}
+              {%- unless forloop.first -%}
+                <span class="apdp__features-sep" aria-hidden="true"></span>
+              {%- endunless -%}
+              <div class="apdp__feature">
+                <p class="apdp__feature-title">{{ parts[0] | strip | escape }}</p>
+                <p class="apdp__feature-text">{{ parts[1] | strip | escape }}</p>
+              </div>
+            {%- endfor -%}
+          </div>
+        {%- elsif feature_blocks.size > 0 -%}
           <div class="apdp__features">
             {%- for block in feature_blocks -%}
               {%- unless forloop.first -%}
@@ -365,11 +430,11 @@
           </div>
         {%- endif -%}
 
-        {%- if section.settings.guarantee_title != blank or section.settings.guarantee_text != blank -%}
+        {%- if guarantee_title != blank or guarantee_text != blank -%}
           <div class="apdp__guarantee">
             <span class="apdp__guarantee-icon" aria-hidden="true">
-              {%- if section.settings.guarantee_icon != blank -%}
-                {{ section.settings.guarantee_icon | image_url: width: 96 | image_tag: loading: 'lazy', alt: '', width: 40, height: 40 }}
+              {%- if guarantee_icon != blank -%}
+                {{ guarantee_icon | image_url: width: 96 | image_tag: loading: 'lazy', alt: '', width: 40, height: 40 }}
               {%- else -%}
                 <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
                   <path d="M20 3.5 6.5 8.5v10.3c0 8.4 5.7 15.3 13.5 17.7 7.8-2.4 13.5-9.3 13.5-17.7V8.5L20 3.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
@@ -379,11 +444,11 @@
               {%- endif -%}
             </span>
             <div class="apdp__guarantee-text">
-              {%- if section.settings.guarantee_title != blank -%}
-                <p class="apdp__guarantee-title">{{ section.settings.guarantee_title }}</p>
+              {%- if guarantee_title != blank -%}
+                <p class="apdp__guarantee-title">{{ guarantee_title }}</p>
               {%- endif -%}
-              {%- if section.settings.guarantee_text != blank -%}
-                <p class="apdp__guarantee-body">{{ section.settings.guarantee_text }}</p>
+              {%- if guarantee_text != blank -%}
+                <p class="apdp__guarantee-body">{{ guarantee_text }}</p>
               {%- endif -%}
             </div>
           </div>
@@ -393,19 +458,33 @@
         {%- if accordion_blocks.size > 0 -%}
           <div class="apdp__accordion">
             {%- for block in accordion_blocks -%}
-              <details class="apdp__acc-item" {{ block.shopify_attributes }} {% if block.settings.open %}open{% endif %}>
-                <summary class="apdp__acc-summary">
-                  <span>{{ block.settings.title }}</span>
-                  <span class="apdp__acc-icon" aria-hidden="true"></span>
-                </summary>
-                <div class="apdp__acc-content rte">
-                  {%- if block.settings.use_product_description -%}
-                    {{ product.description }}
-                  {%- else -%}
-                    {{ block.settings.content }}
-                  {%- endif -%}
-                </div>
-              </details>
+              {%- liquid
+                assign acc_metafield = nil
+                assign acc_key = block.settings.metafield_key | strip
+                if acc_key contains '.'
+                  assign acc_key_parts = acc_key | split: '.'
+                  assign acc_metafield = product.metafields[acc_key_parts[0]][acc_key_parts[1]]
+                endif
+
+                if acc_metafield != blank
+                  capture acc_content
+                    render 'aduro-metafield-content', metafield: acc_metafield
+                  endcapture
+                elsif block.settings.use_product_description
+                  assign acc_content = product.description
+                else
+                  assign acc_content = block.settings.content
+                endif
+              -%}
+              {%- if acc_content != blank -%}
+                <details class="apdp__acc-item" {{ block.shopify_attributes }} {% if block.settings.open %}open{% endif %}>
+                  <summary class="apdp__acc-summary">
+                    <span>{{ block.settings.title }}</span>
+                    <span class="apdp__acc-icon" aria-hidden="true"></span>
+                  </summary>
+                  <div class="apdp__acc-content rte">{{ acc_content }}</div>
+                </details>
+              {%- endif -%}
             {%- endfor -%}
           </div>
         {%- endif -%}
@@ -1382,7 +1461,8 @@
   "settings": [
     {
       "type": "header",
-      "content": "Rating"
+      "content": "Rating",
+      "info": "Per-product override: metafields aduro.rating, aduro.reviews_count, aduro.trusted_text"
     },
     {
       "type": "checkbox",
@@ -1423,7 +1503,8 @@
     },
     {
       "type": "header",
-      "content": "Experts"
+      "content": "Experts",
+      "info": "Per-product override: aduro.expert_images (list of images), aduro.expert_title, aduro.expert_subtitle, aduro.expert_tooltip"
     },
     {
       "type": "image_picker",
@@ -1460,13 +1541,14 @@
     },
     {
       "type": "header",
-      "content": "Description"
+      "content": "Description",
+      "info": "Per-product override: aduro.short_description"
     },
     {
       "type": "richtext",
       "id": "short_description",
       "label": "Short description",
-      "info": "Leave empty to use the custom.short_description metafield, or a trimmed product description."
+      "info": "Used when the product has no aduro.short_description metafield. If both are empty, a trimmed product description is shown."
     },
     {
       "type": "header",
@@ -1501,7 +1583,8 @@
     },
     {
       "type": "header",
-      "content": "Guarantee"
+      "content": "Guarantee",
+      "info": "Per-product override: aduro.guarantee_title, aduro.guarantee_text, aduro.guarantee_icon"
     },
     {
       "type": "image_picker",
@@ -1559,6 +1642,10 @@
       "limit": 4,
       "settings": [
         {
+          "type": "paragraph",
+          "content": "Products with the aduro.stats metafield (one \"10|mins sessions\" entry per line) use that instead of these blocks."
+        },
+        {
           "type": "text",
           "id": "value",
           "label": "Value",
@@ -1577,6 +1664,10 @@
       "name": "Feature",
       "limit": 4,
       "settings": [
+        {
+          "type": "paragraph",
+          "content": "Products with the aduro.features metafield (one \"FDA Cleared|Class II medical device\" entry per line) use that instead of these blocks."
+        },
         {
           "type": "text",
           "id": "title",
@@ -1600,6 +1691,12 @@
           "id": "title",
           "label": "Title",
           "default": "Details"
+        },
+        {
+          "type": "text",
+          "id": "metafield_key",
+          "label": "Product metafield (namespace.key)",
+          "info": "Example: aduro.tech_specs. When the product has this metafield, it replaces the content below. Rows with no content are hidden."
         },
         {
           "type": "checkbox",

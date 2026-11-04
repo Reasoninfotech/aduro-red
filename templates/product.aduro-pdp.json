@@ -11,12 +11,13 @@
         "feature_warranty": { "type": "feature", "settings": { "title": "1-year Warranty", "text": "Quality assurance" } },
         "accordion_details": {
           "type": "accordion",
-          "settings": { "title": "Details", "use_product_description": true, "content": "", "open": false }
+          "settings": { "title": "Details", "metafield_key": "aduro.details", "use_product_description": true, "content": "", "open": false }
         },
         "accordion_specs": {
           "type": "accordion",
           "settings": {
             "title": "Tech specs",
+            "metafield_key": "aduro.tech_specs",
             "use_product_description": false,
             "content": "<ul><li>66 medical-grade Quad LEDs</li><li>20 Infrared LEDs for deep skin penetration</li><li>7 therapeutic light colors</li><li>11 customized treatment programs</li><li>10 minute treatment sessions</li></ul>",
             "open": false
