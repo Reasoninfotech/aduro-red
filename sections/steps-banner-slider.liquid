@@ -1,0 +1,721 @@
+{%- liquid
+  assign s = section.settings
+  assign sid = section.id
+  assign total = section.blocks.size
+
+  assign desc_m = s.description_mobile
+  if desc_m == blank
+    assign desc_m = s.description
+  endif
+
+  assign head_m = s.heading_mobile
+  if head_m == blank
+    assign head_m = s.heading
+  endif
+-%}
+
+{%- style -%}
+  {{ s.custom_css }}
+{%- endstyle -%}
+
+<style>
+   .sbs {
+     display: block;
+     position: relative;
+     padding: 32px 0;
+ }
+ .sbs__frame {
+     position: relative;
+     border-radius: 16px;
+     overflow: hidden;
+ }
+ .sbs__track {
+     position: relative;
+     width: 100%;
+     height: 560px;
+ }
+ .sbs__slide {
+     position: relative;
+     flex-shrink: 0;
+     width: 100%;
+     height: 100%;
+     min-width: 0;
+     min-height: 0;
+     overflow: hidden;
+ }
+ .sbs__media,
+ .sbs__media picture {
+     position: absolute;
+     inset: 0;
+     display: block;
+     width: 100%;
+     height: 100%;
+ }
+ .sbs__img {
+     position: absolute;
+     inset: 0;
+     width: 100%;
+     height: 100%;
+     object-fit: cover;
+     display: block;
+ }
+ .sbs--zoom .sbs__img {
+     transform: scale(1.06);
+     transition: transform calc({{s.transition_speed}}ms * 6) ease;
+ }
+ .sbs--zoom .sbs__slide.swiper-slide-active .sbs__img {
+     transform: scale(1);
+ }
+ .sbs__placeholder {
+     background: #d9d9d9;
+     fill: currentColor;
+     opacity: .35;
+ }
+ .sbs__content {
+     position: absolute;
+     inset: 0;
+     z-index: 2;
+     display: flex;
+     flex-direction: column;
+     justify-content: flex-end;
+     padding: 32px;
+     pointer-events: none;
+ }
+ .sbs__text {
+     text-align: left;
+ }
+ .sbs__heading {
+     margin: 0 0 4px;
+     text-transform: none;
+     font-weight: 500;
+     font-size: 44px;
+     line-height: 50px;
+     letter-spacing: -1px;
+     color: #FFFFFF;
+ }
+ .sbs__desc p {
+     font-weight: 400;
+     font-size: 22px;
+     line-height: 29px;
+     letter-spacing: 0px;
+     color: #FFFFFF;
+ }
+ .sbs__only-m {
+     display: none;
+ }
+ .sbs__steps {
+     display: grid;
+     grid-auto-flow: column;
+     grid-auto-columns: minmax(0, 1fr);
+     gap: 24px;
+     margin-top: 24px;
+     position: relative;
+     z-index: 5;
+     pointer-events: auto;
+ }
+ .sbs__step {
+     appearance: none;
+     -webkit-appearance: none;
+     background: none;
+     border: 0;
+     margin: 0;
+     padding: 0;
+     color: inherit;
+     font: inherit;
+     text-align: start;
+     cursor: pointer;
+     display: flex;
+     flex-direction: column;
+     gap: 4px;
+     min-width: 0;
+     -webkit-tap-highlight-color: transparent;
+ }
+ .sbs__step:focus-visible {
+     outline: 2px solid currentColor;
+     outline-offset: 4px;
+     border-radius: 2px;
+ }
+ .sbs__bar {
+     position: relative;
+     display: block;
+     width: 100%;
+     height: {{s.line_thickness}}px;
+     overflow: hidden;
+     background: color-mix(in srgb, #ffffff 30%, transparent);
+ }
+ .sbs__fill {
+     position: absolute;
+     inset: 0;
+     background: #ffffff;
+     transform: scaleX(0);
+     transform-origin: left center;
+ }
+ [dir="rtl"] .sbs__fill {
+     transform-origin: right center;
+ }
+ .sbs__label {
+     display: block;
+     font-weight: 400;
+     font-size: 18px;
+     line-height: 27px;
+     letter-spacing: 0px;
+     opacity: 0.6;
+     transition: opacity .3s ease;
+     color: #D6D3D1;
+ }
+ .sbs__step.is-active .sbs__label,
+ .sbs__step:hover .sbs__label,
+ .sbs__step:focus-visible .sbs__label {
+     opacity: 1;
+     color: #FFFFFF;
+ }
+ .sbs__mlabels {
+     display: none;
+ }
+ .sbs__mlabel {
+     display: none;
+     font-weight: 400;
+     font-size: 16px;
+     line-height: 24px;
+     letter-spacing: 0px;
+     color: #ffffff;
+ }
+ .sbs__mlabel.is-active {
+     display: block;
+ }
+ .sbs__step.is-active .sbs__fill {
+     transform: scaleX(1);
+ }
+ .sbs--fill-done .is-done .sbs__fill {
+     transform: scaleX(1);
+ }
+
+ .sbs[data-autoplay="true"] .sbs__step.is-active .sbs__fill {
+     transform: scaleX(0);
+     animation: sbs-fill {{s.autoplay_duration}}s linear forwards;
+ }
+ .sbs.is-paused .sbs__fill {
+     animation-play-state: paused;
+ }
+ @keyframes sbs-fill {
+     from {
+         transform: scaleX(0);
+     }
+     to {
+         transform: scaleX(1);
+     }
+ }
+ .sbs__empty {
+     padding: 48px 24px;
+     text-align: center;
+     border: 1px dashed currentColor;
+     border-radius: 16px;
+     opacity: .6;
+ }
+ @media (max-width: 991px) {
+     .sbs__heading {
+         font-size: 36px;
+         line-height: 45px;
+     }
+     .sbs__desc p {
+         font-size: 18px;
+         line-height: 25px;
+     }
+     .sbs__label {
+         font-size: 16px;
+         line-height: 22px;
+     }
+ }
+ @media (max-width: 767px) {
+  .sbs {
+         padding: 24px 0;
+     }
+     .sbs__img {
+         object-position: right;
+     }
+     .sbs__heading {
+         font-size: 28px;
+         line-height: 31px;
+     }
+     .sbs__desc p {
+         font-size: 16px;
+         line-height: 24px;
+     }
+     .sbs__desc p br {
+         display: none;
+     }
+     .sbs__steps {
+         gap: 16px;
+     }
+     .sbs__mlabels {
+         display: block;
+         margin-top: 8px;
+     }
+     .sbs__step .sbs__label {
+         display: none;
+     }
+ }
+ @media (max-width: 575px) {
+     .sbs__mlabel {
+         color: #000000;
+     }
+     .sbs__bar {
+         background: #D6D3D1;
+     }
+     .sbs__fill {
+         background: #000000;
+     }
+     {% comment %} .sbs {
+         padding-block: 24px 24px;
+     } {% endcomment %}
+     .common-container {
+         padding-inline: 16px;
+     }
+     .sbs__track {
+         height: auto;
+         aspect-ratio: 3 / 4;
+     }
+     .sbs__content {
+         padding: 24px;
+     }
+     .sbs__only-d {
+         display: none;
+     }
+     .sbs__only-m {
+         display: block;
+     }
+     .sbs__heading {
+         margin: 0 0 12px;
+     }
+     .sbs__heading,
+     .sbs__desc p {
+         color: #000000;
+     }
+     .sbs__desc {
+         font-size: 14px;
+     }
+     .sbs__steps {
+         gap: 16px;
+         margin-top: 20px;
+     }
+     .sbs__step {
+         gap: 0;
+         padding-block: 0;
+     }
+ }
+ @media (prefers-reduced-motion: reduce) {
+     .sbs__slide,
+     .sbs__img,
+     .sbs__label {
+         transition: none !important;
+     }
+     .sbs__fill {
+         animation: none !important;
+     }
+ }
+</style>
+
+<steps-banner-slider
+  class="sbs sbs-{{ sid }}{% if s.zoom_effect %} sbs--zoom{% endif %}{% if s.fill_completed %} sbs--fill-done{% endif %}{% if s.autoplay %} is-paused{% endif %}"
+  data-autoplay="{{ s.autoplay }}"
+  data-loop="{{ s.loop }}"
+  data-pause-hover="{{ s.pause_on_hover }}"
+>
+  <div class="common-container">
+    {%- if total == 0 -%}
+      <div class="sbs__empty">Add at least one "Step" block to this section.</div>
+    {%- else -%}
+      <div class="sbs__frame" data-frame>
+        <div class="sbs__track swiper" data-track>
+          <div class="swiper-wrapper">
+            {%- for block in section.blocks -%}
+              {%- liquid
+                assign i = forloop.index0
+                assign img_d = block.settings.image_desktop
+                assign img_m = block.settings.image_mobile
+                if img_d == blank
+                  assign img_d = img_m
+                endif
+                if img_m == blank
+                  assign img_m = img_d
+                endif
+                if forloop.first and section.index == 1
+                  assign load = 'eager'
+                else
+                  assign load = 'lazy'
+                endif
+              -%}
+              <div
+                class="sbs__slide swiper-slide"
+                data-slide
+                data-index="{{ i }}"
+                {{ block.shopify_attributes }}
+              >
+                <div class="sbs__media">
+                  {%- if img_d != blank -%}
+                    <picture>
+                      <source
+                        media="(max-width: 575px)"
+                        srcset="{{ img_m | image_url: width: 600 }} 600w, {{ img_m | image_url: width: 900 }} 900w, {{ img_m | image_url: width: 1200 }} 1200w"
+                        sizes="100vw"
+                      >
+                      {{
+                        img_d
+                        | image_url: width: 2400
+                        | image_tag:
+                          class: 'sbs__img',
+                          loading: load,
+                          widths: '750, 1100, 1500, 1920, 2400',
+                          sizes: '(min-width: 1920px) 1920px, 100vw',
+                          alt: img_d.alt
+                      }}
+                    </picture>
+                  {%- else -%}
+                    {{ 'image' | placeholder_svg_tag: 'sbs__img sbs__placeholder' }}
+                  {%- endif -%}
+                </div>
+              </div>
+            {%- endfor -%}
+          </div>
+        </div>
+
+        <div class="sbs__content">
+          <div class="sbs__text">
+            {%- if s.heading != blank -%}
+              <h2 class="sbs__heading sbs__only-d">{{ s.heading }}</h2>
+            {%- endif -%}
+            {%- if head_m != blank -%}
+              <h2 class="sbs__heading sbs__only-m">{{ head_m }}</h2>
+            {%- endif -%}
+            {%- if s.description != blank -%}
+              <div class="sbs__desc sbs__only-d">{{ s.description }}</div>
+            {%- endif -%}
+            {%- if desc_m != blank -%}
+              <div class="sbs__desc sbs__only-m">{{ desc_m }}</div>
+            {%- endif -%}
+          </div>
+
+          {%- if s.show_steps -%}
+            <div class="sbs__steps">
+              {%- for block in section.blocks -%}
+                <button
+                  type="button"
+                  class="sbs__step{% if forloop.first %} is-active{% endif %}"
+                  data-dstep
+                  data-step-index="{{ forloop.index0 }}"
+                  aria-label="{{ block.settings.label | escape }}"
+                  {% if forloop.first %}
+                    aria-current="step"
+                  {% endif %}
+                >
+                  <span class="sbs__bar"><span class="sbs__fill"></span></span>
+                  <span class="sbs__label">{{ block.settings.label }}</span>
+                </button>
+              {%- endfor -%}
+            </div>
+            <div class="sbs__mlabels" aria-hidden="true">
+              {%- for block in section.blocks -%}
+                <span class="sbs__mlabel{% if forloop.first %} is-active{% endif %}" data-mlabel>
+                  {{- block.settings.label -}}
+                </span>
+              {%- endfor -%}
+            </div>
+          {%- endif -%}
+        </div>
+      </div>
+    {%- endif -%}
+  </div>
+</steps-banner-slider>
+
+<script>
+  (function () {
+    const sectionSelector = '.sbs-{{ sid }}';
+    const section = document.querySelector(sectionSelector);
+    if (!section || section.dataset.swiperInitialized === 'true') return;
+
+    function loadSwiper(callback) {
+      if (window.Swiper) {
+        callback();
+        return;
+      }
+
+      if (!document.querySelector('link[data-sbs-swiper-css]')) {
+        const css = document.createElement('link');
+        css.rel = 'stylesheet';
+        css.href = 'https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css';
+        css.dataset.sbsSwiperCss = 'true';
+        document.head.appendChild(css);
+      }
+
+      const existingScript = document.querySelector('script[data-sbs-swiper-js]');
+      if (existingScript) {
+        existingScript.addEventListener('load', callback, { once: true });
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js';
+      script.dataset.sbsSwiperJs = 'true';
+      script.onload = callback;
+      document.head.appendChild(script);
+    }
+
+    function init() {
+      if (!section.isConnected || section.dataset.swiperInitialized === 'true' || !window.Swiper) return;
+
+      const track = section.querySelector('[data-track]');
+      const slides = Array.from(section.querySelectorAll('[data-slide]'));
+      const steps = Array.from(section.querySelectorAll('[data-dstep]'));
+      const mobileLabels = Array.from(section.querySelectorAll('[data-mlabel]'));
+      const frame = section.querySelector('[data-frame]');
+      if (!track || !slides.length || !frame) return;
+
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const shouldAutoplay = section.dataset.autoplay === 'true' && !reduceMotion && slides.length > 1;
+      const loopEnabled = section.dataset.loop !== 'false';
+      const duration = Math.max(2, Number({{ s.autoplay_duration | default: 5 }}) || 5) * 1000;
+      const speed = Math.max(0, Number({{ s.transition_speed | default: 700 }}) || 700);
+      const pauseOnHover = section.dataset.pauseHover === 'true';
+
+      section.dataset.swiperInitialized = 'true';
+
+      const swiper = new Swiper(track, {
+        slidesPerView: 1,
+        slidesPerGroup: 1,
+        speed: speed,
+        effect: 'fade',
+        fadeEffect: { crossFade: true },
+        loop: loopEnabled && slides.length > 1,
+        allowTouchMove: true,
+        watchSlidesProgress: true,
+        autoplay: shouldAutoplay ? {
+          delay: duration,
+          disableOnInteraction: false,
+          pauseOnMouseEnter: pauseOnHover,
+          waitForTransition: true
+        } : false,
+        on: {
+          init: function () { updateControls(this); },
+          slideChange: function () { updateControls(this); },
+          autoplayTimeLeft: function (swiperInstance, timeLeft, progress) {
+            const activeStep = steps[realIndex(swiperInstance)];
+            if (!activeStep) return;
+            const fill = activeStep.querySelector('.sbs__fill');
+            if (fill) {
+              fill.style.transform = 'scaleX(' + Math.max(0, Math.min(1, 1 - progress)) + ')';
+              fill.style.transition = 'none';
+            }
+          }
+        }
+      });
+
+      function realIndex(swiperInstance) {
+        return typeof swiperInstance.realIndex === 'number' ? swiperInstance.realIndex : 0;
+      }
+
+      function updateControls(swiperInstance) {
+        const index = realIndex(swiperInstance);
+        steps.forEach((step, i) => {
+          step.classList.toggle('is-active', i === index);
+          step.classList.toggle('is-done', i < index);
+          if (i === index) step.setAttribute('aria-current', 'step');
+          else step.removeAttribute('aria-current');
+          const fill = step.querySelector('.sbs__fill');
+          if (fill) {
+            fill.style.transition = '';
+            fill.style.transform = i < index && section.classList.contains('sbs--fill-done')
+              ? 'scaleX(1)'
+              : (i === index && !shouldAutoplay ? 'scaleX(1)' : 'scaleX(0)');
+          }
+        });
+        slides.forEach((slide, i) => slide.classList.toggle('is-active', i === index));
+        mobileLabels.forEach((label, i) => label.classList.toggle('is-active', i === index));
+      }
+
+      steps.forEach((step) => {
+        step.addEventListener('click', function () {
+          const index = Number(step.dataset.stepIndex);
+          if (!Number.isNaN(index)) swiper.slideToLoop ? swiper.slideToLoop(index) : swiper.slideTo(index);
+          if (shouldAutoplay && swiper.autoplay) swiper.autoplay.start();
+        });
+      });
+
+      frame.addEventListener('touchstart', function () {
+        if (shouldAutoplay && swiper.autoplay) swiper.autoplay.pause();
+      }, { passive: true });
+      frame.addEventListener('touchend', function () {
+        if (shouldAutoplay && swiper.autoplay) swiper.autoplay.resume();
+      }, { passive: true });
+      frame.addEventListener('touchcancel', function () {
+        if (shouldAutoplay && swiper.autoplay) swiper.autoplay.resume();
+      }, { passive: true });
+
+      section.addEventListener('shopify:block:select', function (event) {
+        const slide = event.target.closest('[data-slide]');
+        if (!slide) return;
+        if (swiper.autoplay) swiper.autoplay.stop();
+        const index = Number(slide.dataset.index);
+        if (!Number.isNaN(index)) swiper.slideToLoop ? swiper.slideToLoop(index) : swiper.slideTo(index);
+      });
+
+      section.addEventListener('shopify:block:deselect', function () {
+        if (shouldAutoplay && swiper.autoplay) swiper.autoplay.start();
+      });
+
+      section.swiperInstance = swiper;
+      updateControls(swiper);
+    }
+
+    loadSwiper(init);
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Steps banner slider",
+  "tag": "section",
+  "class": "section-steps-banner-slider",
+  "max_blocks": 6,
+  "settings": [
+    { "type": "header", "content": "Content" },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Title (desktop)",
+      "default": "Just 10 mins daily"
+    },
+    {
+      "type": "text",
+      "id": "heading_mobile",
+      "label": "Title (mobile)",
+      "info": "Leave empty to use the desktop title."
+    },
+    {
+      "type": "richtext",
+      "id": "description",
+      "label": "Content (desktop)",
+      "default": "<p>Clean skin. Choose your program. Put on your mask. Let Aduro do the rest. Simple enough to use consistently. Versatile enough to share with the people you love.</p>"
+    },
+    {
+      "type": "richtext",
+      "id": "description_mobile",
+      "label": "Content (mobile)",
+      "info": "Leave empty to use the desktop content.",
+      "default": "<p>Simple enough to use consistently. Versatile enough to share with the people you love.</p>"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_steps",
+      "label": "Show step lines & labels",
+      "default": true
+    },
+
+    { "type": "header", "content": "Slider & animation" },
+    {
+      "type": "checkbox",
+      "id": "autoplay",
+      "label": "Autoplay",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "autoplay_duration",
+      "label": "Time per step",
+      "min": 2,
+      "max": 12,
+      "step": 0.5,
+      "unit": "s",
+      "default": 5
+    },
+    {
+      "type": "checkbox",
+      "id": "loop",
+      "label": "Loop back to first step",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "pause_on_hover",
+      "label": "Pause on hover (desktop)",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "fill_completed",
+      "label": "Keep completed step lines filled",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "line_thickness",
+      "label": "Step line thickness",
+      "min": 1,
+      "max": 6,
+      "step": 1,
+      "unit": "px",
+      "default": 2
+    },
+    {
+      "type": "range",
+      "id": "transition_speed",
+      "label": "Fade speed",
+      "min": 200,
+      "max": 1500,
+      "step": 100,
+      "unit": "ms",
+      "default": 700
+    },
+    {
+      "type": "checkbox",
+      "id": "zoom_effect",
+      "label": "Subtle zoom on image change",
+      "default": true
+    },
+
+    { "type": "header", "content": "Advanced" },
+    {
+      "type": "textarea",
+      "id": "custom_css",
+      "label": "Custom CSS",
+      "info": "Prefix selectors with .sbs-{section id} or use .sbs__heading, .sbs__desc, .sbs__label etc."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "step",
+      "name": "Step",
+      "limit": 6,
+      "settings": [
+        {
+          "type": "text",
+          "id": "label",
+          "label": "Step label",
+          "default": "01. Prep with clean skin"
+        },
+        {
+          "type": "image_picker",
+          "id": "image_desktop",
+          "label": "Desktop image",
+          "info": "Recommended: 2400 × 1100 px (landscape)."
+        },
+        {
+          "type": "image_picker",
+          "id": "image_mobile",
+          "label": "Mobile image",
+          "info": "Recommended: 900 × 1200 px (portrait). Empty = desktop image is used."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Steps banner slider",
+      "blocks": [
+        { "type": "step", "settings": { "label": "01. Prep with clean skin" } },
+        { "type": "step", "settings": { "label": "02. Choose programme" } },
+        { "type": "step", "settings": { "label": "03. Sit back and relax" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

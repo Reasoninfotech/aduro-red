@@ -1,0 +1,387 @@
+{%- comment -%}
+  PDP FAQ Section  (sections/pdp-faq.liquid)  -- FLEX version
+  Priority:
+    1) Section blocks (FAQ item) -> jo hoy to aa vaparase
+    2) Product metafield custom.pdp_faq_list (metaobject list: faq_list) -> jo block na hoy to
+  Title:
+    1) Section setting "Title"
+    2) Product metafield custom.pdp_faq_title (single line text)
+  Content:
+    Section setting "Content" (richtext) + Contact link
+{%- endcomment -%}
+
+{%- liquid
+  assign faq_title = section.settings.title
+  if faq_title == blank
+    assign faq_title = product.metafields.custom.pdp_faq_title.value
+  endif
+
+  assign use_blocks = false
+  if section.blocks.size > 0
+    assign use_blocks = true
+  endif
+
+  assign meta_items = product.metafields.custom.pdp_faq_list.value
+  assign has_items = false
+  if use_blocks
+    assign has_items = true
+  elsif meta_items != blank and meta_items.size > 0
+    assign has_items = true
+  endif
+-%}
+
+{%- if has_items -%}
+  {%- style -%}
+    #pdp-faq-{{ section.id }} {
+      --faq-pt: {{ section.settings.padding_top_mobile }}px;
+      --faq-pb: {{ section.settings.padding_bottom_mobile }}px;
+      --faq-bg: {{ section.settings.bg_color }};
+      --faq-text: {{ section.settings.text_color }};
+      --faq-border: {{ section.settings.border_color }};
+      background-color: var(--faq-bg);
+      color: var(--faq-text);
+      padding-top: var(--faq-pt);
+      padding-bottom: var(--faq-pb);
+    }
+    @media screen and (min-width: 750px) {
+      #pdp-faq-{{ section.id }} {
+        --faq-pt: {{ section.settings.padding_top_tablet }}px;
+        --faq-pb: {{ section.settings.padding_bottom_tablet }}px;
+      }
+    }
+    @media screen and (min-width: 990px) {
+      #pdp-faq-{{ section.id }} {
+        --faq-pt: {{ section.settings.padding_top_desktop }}px;
+        --faq-pb: {{ section.settings.padding_bottom_desktop }}px;
+      }
+    }
+  {%- endstyle -%}
+
+  <section id="pdp-faq-{{ section.id }}" class="pdp-faq" data-pdp-faq data-open-first="{{ section.settings.open_first }}">
+    <div class="common-container">
+      <div class="pdp-faq__wrap">
+
+        <div class="pdp-faq__info">
+          {%- if faq_title != blank -%}
+            <h2 class="pdp-faq__title">{{ faq_title }}</h2>
+          {%- endif -%}
+
+          {%- if section.settings.content != blank or section.settings.link_label != blank -%}
+            <div class="pdp-faq__content">
+              {%- if section.settings.content != blank -%}
+                <div class="pdp-faq__text rte">{{ section.settings.content }}</div>
+              {%- endif -%}
+              {%- if section.settings.link_label != blank -%}
+                <a class="pdp-faq__link" href="{{ section.settings.link_url | default: '#' }}">{{ section.settings.link_label }}</a>
+              {%- endif -%}
+            </div>
+          {%- endif -%}
+        </div>
+
+        <div class="pdp-faq__list">
+          {%- if use_blocks -%}
+            {%- for block in section.blocks -%}
+              {%- if block.settings.question != blank -%}
+                <div class="pdp-faq__item" {{ block.shopify_attributes }}>
+                  <h3 class="pdp-faq__q">
+                    <div class="pdp-faq__btn" aria-expanded="false" aria-controls="faq-{{ section.id }}-{{ forloop.index }}">
+                      <span>{{ block.settings.question }}</span>
+                      <span class="pdp-faq__icon" aria-hidden="true"></span>
+                    </div>
+                  </h3>
+                  <div class="pdp-faq__panel" id="faq-{{ section.id }}-{{ forloop.index }}" role="region">
+                    <div class="pdp-faq__panel-inner">
+                      <div class="pdp-faq__answer rte">{{ block.settings.answer }}</div>
+                    </div>
+                  </div>
+                </div>
+              {%- endif -%}
+            {%- endfor -%}
+          {%- else -%}
+            {%- for item in meta_items -%}
+              {%- assign q = item.question.value -%}
+              {%- if q != blank -%}
+                <div class="pdp-faq__item">
+                  <h3 class="pdp-faq__q">
+                    <div class="pdp-faq__btn" aria-expanded="false" aria-controls="faq-{{ section.id }}-{{ forloop.index }}">
+                      <span>{{ q }}</span>
+                      <span class="pdp-faq__icon" aria-hidden="true"></span>
+                    </div>
+                  </h3>
+                  <div class="pdp-faq__panel" id="faq-{{ section.id }}-{{ forloop.index }}" role="region">
+                    <div class="pdp-faq__panel-inner">
+                      <div class="pdp-faq__answer rte">{{ item.answer | metafield_tag }}</div>
+                    </div>
+                  </div>
+                </div>
+              {%- endif -%}
+            {%- endfor -%}
+          {%- endif -%}
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  {% style %}
+    /* ===== Layout (FLEX) ===== */
+    .pdp-faq__wrap {display: flex; flex-direction: column; gap: 0; }
+    .pdp-faq__info {min-width: 0; }
+    .pdp-faq__list {min-width: 0; width: 100%; }
+
+    .pdp-faq__title {margin: 0 0 24px; font-size: 28px; line-height: normal; font-weight: 500;}
+    .pdp-faq__text p {margin: 0; line-height: normal; }
+    .pdp-faq__link {display: inline-block; margin-top: 2px; font-size: 14px; line-height: normal; color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+
+    /* ===== Accordion ===== */
+    .pdp-faq__item {border-bottom: 1px solid var(--faq-border, #e5e5e5);}
+    .pdp-faq__item:first-child {border-top: 0;}
+    .pdp-faq__q {margin: 0; font-size: inherit; font-weight: inherit;}
+    .pdp-faq__btn { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 0; cursor: pointer; font-size: 20px; line-height: normal; font-weight: 500;}
+    .pdp-faq__btn:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+    .pdp-faq__icon {position: relative; flex: 0 0 12px; width: 12px; height: 12px; }
+    .pdp-faq__icon::before,
+    .pdp-faq__icon::after { content: ""; position: absolute; background: currentColor; transition: transform 0.25s ease, opacity 0.25s ease;}
+    .pdp-faq__icon::before {top: 50%; left: 0; width: 100%; height: 1px; transform: translateY(-50%); }
+    .pdp-faq__icon::after {left: 50%; top: 0; width: 1px; height: 100%; transform: translateX(-50%); }
+    .pdp-faq__btn[aria-expanded="true"] .pdp-faq__icon::after {transform: translateX(-50%) rotate(90deg); opacity: 0; }
+
+    /* open/close animation (height 0 -> auto) */
+    .pdp-faq__panel {display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s ease;}
+    .pdp-faq__panel-inner {overflow: hidden; min-height: 0;}
+    .pdp-faq__btn[aria-expanded="true"] + .pdp-faq__panel,
+    .pdp-faq__item.is-open .pdp-faq__panel {grid-template-rows: 1fr;}
+    .pdp-faq__answer { padding: 0 0 16px; font-size: 22px; line-height: normal;}
+    .pdp-faq__answer p { margin: 0 0 10px; }
+    .pdp-faq__answer p:last-child { margin-bottom: 0; }
+    .pdp-faq__answer ul,
+    .pdp-faq__answer ol { margin: 0 0 10px; padding-left: 18px; }
+
+    /* ===== Mobile: title -> accordion -> content ===== */
+    @media screen and (max-width: 767px) {
+      .pdp-faq__wrap { display: flex; flex-direction: column;flex-wrap: wrap; }
+      .pdp-faq__info { display: contents; }
+      .pdp-faq__title { order: 1; margin-bottom: 16px; font-size: 28px; line-height: normal; }
+      .pdp-faq__text p { font-size: 16px; }
+      .pdp-faq__text p br{display: none;}
+      .pdp-faq__list { order: 2; }
+      .pdp-faq__content { order: 3; margin-top: 24px; }
+      .pdp-faq__answer {font-size: 16px;}
+      .pdp-faq__btn { padding: 16px 0;font-size: 16px; }
+      .pdp-faq__btn span:first-child { max-width: calc(100% - 28px); }
+    }
+
+    /* ===== Tablet + Desktop: 2 columns (left 1 : right 2) ===== */
+    @media screen and (min-width: 768px) {
+      .pdp-faq__wrap { flex-direction: row; align-items: flex-start; gap: 40px; }
+    
+      .pdp-faq__wrap { gap: 50px; }
+      .pdp-faq__info { width: calc(30% - 25px); }
+      .pdp-faq__list { width: calc(70% - 25px); }
+      .pdp-faq__title { max-width: 100%; margin-bottom: 24px; }
+      .pdp-faq__text p { font-size: 22px; }
+    }
+    @media screen and (min-width: 1024px) {
+      .pdp-faq__wrap { gap: 100px; }
+      .pdp-faq__info { width: calc(30% - 50px); }
+      .pdp-faq__list { width: calc(70% - 50px); }
+      .pdp-faq__title { font-size: 32px; line-height: 40px; }
+    }
+  {% endstyle %}
+
+  <script>
+    (function () {
+      var root = document.getElementById('pdp-faq-{{ section.id }}');
+      if (!root || root.dataset.faqInit) return;
+      root.dataset.faqInit = 'true';
+
+      var items = root.querySelectorAll('.pdp-faq__item');
+
+      function setState(item, open) {
+        var btn = item.querySelector('.pdp-faq__btn');
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        item.classList.toggle('is-open', open);
+      }
+
+      items.forEach(function (item) {
+        item.querySelector('.pdp-faq__btn').addEventListener('click', function () {
+          var isOpen = item.classList.contains('is-open');
+          items.forEach(function (other) { setState(other, false); });
+          if (!isOpen) setState(item, true);
+        });
+      });
+
+      if (root.dataset.openFirst === 'true' && items.length) {
+        setState(items[0], true);
+      }
+    })();
+  </script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "PDP FAQ",
+  "tag": "div",
+  "class": "section-pdp-faq",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Content"
+    },
+    {
+      "type": "html",
+      "id": "title",
+      "label": "Title",
+      "info": "Khali hoy to product metafield (custom.pdp_faq_title) vaparase",
+      "default": "Frequently asked questions"
+    },
+    {
+      "type": "richtext",
+      "id": "content",
+      "label": "Content",
+      "default": "<p>Still deciding?<br>Our team is here to help.</p>"
+    },
+    {
+      "type": "text",
+      "id": "link_label",
+      "label": "Link label",
+      "default": "Contact us"
+    },
+    {
+      "type": "url",
+      "id": "link_url",
+      "label": "Link URL"
+    },
+    {
+      "type": "checkbox",
+      "id": "open_first",
+      "label": "First accordion open rakho",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "Background",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text",
+      "default": "#1a1a1a"
+    },
+    {
+      "type": "color",
+      "id": "border_color",
+      "label": "Border",
+      "default": "#e5e5e5"
+    },
+    {
+      "type": "header",
+      "content": "Padding - Desktop"
+    },
+    {
+      "type": "range",
+      "id": "padding_top_desktop",
+      "label": "Padding top",
+      "min": 0,
+      "max": 200,
+      "step": 4,
+      "unit": "px",
+      "default": 80
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom_desktop",
+      "label": "Padding bottom",
+      "min": 0,
+      "max": 200,
+      "step": 4,
+      "unit": "px",
+      "default": 80
+    },
+    {
+      "type": "header",
+      "content": "Padding - Tablet"
+    },
+    {
+      "type": "range",
+      "id": "padding_top_tablet",
+      "label": "Padding top",
+      "min": 0,
+      "max": 200,
+      "step": 4,
+      "unit": "px",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom_tablet",
+      "label": "Padding bottom",
+      "min": 0,
+      "max": 200,
+      "step": 4,
+      "unit": "px",
+      "default": 60
+    },
+    {
+      "type": "header",
+      "content": "Padding - Mobile"
+    },
+    {
+      "type": "range",
+      "id": "padding_top_mobile",
+      "label": "Padding top",
+      "min": 0,
+      "max": 200,
+      "step": 4,
+      "unit": "px",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom_mobile",
+      "label": "Padding bottom",
+      "min": 0,
+      "max": 200,
+      "step": 4,
+      "unit": "px",
+      "default": 40
+    }
+  ],
+  "blocks": [
+    {
+      "type": "faq_item",
+      "name": "FAQ item",
+      "settings": [
+        {
+          "type": "text",
+          "id": "question",
+          "label": "Question",
+          "default": "What does the product do?"
+        },
+        {
+          "type": "richtext",
+          "id": "answer",
+          "label": "Answer",
+          "default": "<p>Write the answer here.</p>"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "PDP FAQ",
+      "blocks": [
+        { "type": "faq_item" },
+        { "type": "faq_item" },
+        { "type": "faq_item" }
+      ]
+    }
+  ]
+}
+{% endschema %}

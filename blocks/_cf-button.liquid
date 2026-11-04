@@ -1,0 +1,52 @@
+{%- comment -%}
+  Footer button for the Custom footer section. Styles live in sections/custom-footer.liquid (.cf-*).
+{%- endcomment -%}
+<div
+  class="cf-col cf-col--button"
+  {{ block.shopify_attributes }}
+>
+  {%- if block.settings.label != blank and block.settings.url != blank -%}
+    <a
+      class="cf-btn cf-btn--{{ block.settings.style }}"
+      href="{{ block.settings.url }}"
+    >
+      {{- block.settings.label | escape -}}
+    </a>
+  {%- endif -%}
+</div>
+
+{% schema %}
+{
+  "name": "Button",
+  "tag": null,
+  "settings": [
+    {
+      "type": "text",
+      "id": "label",
+      "label": "Label",
+      "default": "Contact us"
+    },
+    {
+      "type": "url",
+      "id": "url",
+      "label": "Link"
+    },
+    {
+      "type": "select",
+      "id": "style",
+      "label": "Style",
+      "options": [
+        {
+          "value": "outline",
+          "label": "Outline"
+        },
+        {
+          "value": "primary",
+          "label": "Solid"
+        }
+      ],
+      "default": "outline"
+    }
+  ]
+}
+{% endschema %}

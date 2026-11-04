@@ -1,0 +1,1683 @@
+{%- liquid
+  assign s = section.settings
+
+  assign benefit_blocks = 0
+  for i in (1..3)
+    assign t_key = 'benefit_' | append: i | append: '_title'
+    assign d_key = 'benefit_' | append: i | append: '_description'
+    assign image_key = 'benefit_' | append: i | append: '_image'
+    if s[t_key] != blank or s[d_key] != blank or s[image_key] != blank
+      assign benefit_blocks = benefit_blocks | plus: 1
+    endif
+  endfor
+
+  assign content_blocks = section.blocks.size
+  assign columns_class = 'cf-columns'
+  if content_blocks == 0
+    assign columns_class = 'cf-columns cf-columns--solo'
+  endif
+
+  assign show_country = s.show_country
+  if localization.available_countries.size <= 1
+    assign show_country = false
+  endif
+  assign show_language = s.show_language
+  if localization.available_languages.size <= 1
+    assign show_language = false
+  endif
+  assign has_localization = false
+  if s.show_localization
+    if show_country
+      assign has_localization = true
+    elsif show_language
+      assign has_localization = true
+    endif
+  endif
+
+  assign custom_social_count = 0
+  for i in (1..6)
+    assign icon_key = 'social_' | append: i | append: '_icon'
+    assign link_key = 'social_' | append: i | append: '_link'
+    if s[icon_key] != blank and s[link_key] != blank
+      assign custom_social_count = custom_social_count | plus: 1
+    endif
+  endfor
+  assign has_social = false
+  if s.show_social or custom_social_count > 0
+    assign has_social = true
+  endif
+
+  assign custom_payment_count = 0
+  if s.payment_1_image != blank
+    assign custom_payment_count = 1
+  endif
+  assign has_payments = false
+  if s.show_payments or custom_payment_count > 0
+    assign has_payments = true
+  endif
+
+  assign has_top_row = false
+  if has_social
+    assign has_top_row = true
+  elsif has_localization
+    assign has_top_row = true
+  endif
+
+  assign logo = s.logo | default: settings.logo
+  assign logo_alt = logo.alt | default: shop.name
+  assign logo_href = s.logo_link | default: routes.root_url
+
+  assign current_year = 'now' | date: '%Y'
+  assign copyright = s.copyright_text | replace: '{year}', current_year | replace: '{shop}', shop.name
+-%}
+
+<div class="cf">
+  {%- if s.show_benefits and benefit_blocks > 0 -%}
+    <div class="cf-top">
+      <div class="cf-top__inner">
+        <ul
+          class="cf-benefits"
+          role="list"
+        >
+          {%- for i in (1..3) -%}
+            {%- assign k_title = 'benefit_' | append: i | append: '_title' -%}
+            {%- assign k_desc = 'benefit_' | append: i | append: '_description' -%}
+            {%- assign k_link = 'benefit_' | append: i | append: '_link' -%}
+            {%- assign k_image = 'benefit_' | append: i | append: '_image' -%}
+            {%- assign b_title = s[k_title] -%}
+            {%- assign b_desc = s[k_desc] -%}
+            {%- assign b_link = s[k_link] -%}
+            {%- assign b_image = s[k_image] -%}
+
+            {%- assign benefit_has_content = false -%}
+            {%- if b_title != blank or b_desc != blank or b_image != blank -%}
+              {%- assign benefit_has_content = true -%}
+            {%- endif -%}
+
+            {%- if benefit_has_content -%}
+              {%- capture benefit_content -%}
+                <span class="cf-benefit__text">
+                  {%- if b_title != blank -%}
+                    <span class="cf-benefit__title">{{ b_title | escape }}</span>
+                  {%- endif -%}
+                  {%- if b_desc != blank -%}
+                    <span class="cf-benefit__desc">{{ b_desc | escape }}</span>
+                  {%- endif -%}
+                </span>
+              {%- endcapture -%}
+
+              <li class="cf-benefit">
+                {%- if b_link != blank -%}
+                  <a
+                    class="cf-benefit__body cf-benefit__body--link"
+                    href="{{ b_link }}"
+                  >
+                    {%- if b_image != blank -%}
+                      {{
+                        b_image
+                        | image_url: width: 240
+                        | image_tag:
+                          class: 'cf-benefit__image',
+                          loading: 'lazy',
+                          widths: '40, 60, 80, 100, 120, 160, 200, 240',
+                          alt: b_image.alt
+                      }}
+                    {%- endif -%}
+                    {{- benefit_content -}}
+                  </a>
+                {%- else -%}
+                  <div class="cf-benefit__body">
+                    {%- if b_image != blank -%}
+                      {{
+                        b_image
+                        | image_url: width: 240
+                        | image_tag:
+                          class: 'cf-benefit__image',
+                          loading: 'lazy',
+                          widths: '40, 60, 80, 100, 120, 160, 200, 240',
+                          alt: b_image.alt
+                      }}
+                    {%- endif -%}
+                    {{- benefit_content -}}
+                  </div>
+                {%- endif -%}
+              </li>
+            {%- endif -%}
+          {%- endfor -%}
+        </ul>
+      </div>
+    </div>
+  {%- endif -%}
+
+  <div class="cf-main">
+    <div class="cf-main__inner">
+      <div class="{{ columns_class }}">
+        <div class="cf-brand">
+          <div class="cf-logo">
+            <a
+              class="cf-logo__link"
+              href="{{ logo_href }}"
+            >
+              {%- if logo != blank -%}
+                <picture>
+                  {%- if s.logo_mobile != blank -%}
+                    <source
+                      media="(max-width: 749px)"
+                      srcset="{{ s.logo_mobile | image_url: width: 400 }} 1x, {{ s.logo_mobile | image_url: width: 800 }} 2x"
+                    >
+                  {%- endif -%}
+                  {{
+                    logo
+                    | image_url: width: 800
+                    | image_tag:
+                      class: 'cf-logo__img',
+                      alt: logo_alt,
+                      loading: 'lazy',
+                      widths: '200, 400, 600, 800',
+                      sizes: '(max-width: 749px) 60vw, 300px'
+                  }}
+                </picture>
+              {%- else -%}
+                <span class="cf-logo__text">{{ shop.name }}</span>
+              {%- endif -%}
+            </a>
+          </div>
+
+          {%- if s.show_newsletter -%}
+            <div class="cf-newsletter">
+              {%- if s.newsletter_heading != blank -%}
+                <h2 class="cf-newsletter__heading">{{ s.newsletter_heading | escape }}</h2>
+              {%- endif -%}
+              {%- if s.newsletter_description != blank -%}
+                <div class="cf-newsletter__description cf-rte">{{ s.newsletter_description }}</div>
+              {%- endif -%}
+              <div class="cf-newsletter__form">
+                {% content_for 'block', type: 'email-signup', id: 'cf-newsletter' %}
+              </div>
+            </div>
+          {%- endif -%}
+        </div>
+
+        {% content_for 'blocks' %}
+      </div>
+
+      <div class="cf-bottom">
+        {%- if has_top_row -%}
+          <div class="cf-bottom__row cf-bottom__row--top">
+            {%- if has_social -%}
+              <div class="cf-social">
+                {%- if s.show_social -%}
+                  <div class="cf-social__theme">
+                    {%- content_for 'block', type: 'social-links', id: 'cf-social' -%}
+                  </div>
+                {%- endif -%}
+
+                {%- if custom_social_count > 0 -%}
+                  <ul
+                    class="cf-social__custom"
+                    role="list"
+                  >
+                    {%- for i in (1..6) -%}
+                      {%- assign k_icon = 'social_' | append: i | append: '_icon' -%}
+                      {%- assign k_link = 'social_' | append: i | append: '_link' -%}
+                      {%- assign soc_icon = s[k_icon] -%}
+                      {%- assign soc_link = s[k_link] -%}
+                      {%- if soc_icon != blank and soc_link != blank -%}
+                        {%- assign soc_name = soc_icon.alt -%}
+                        {%- if soc_name == blank -%}
+                          {%- assign soc_name = soc_link
+                            | remove: 'https://'
+                            | remove: 'http://'
+                            | remove: 'www.'
+                            | split: '/'
+                            | first
+                          -%}
+                        {%- endif -%}
+                        <li class="cf-social__item">
+                          <a
+                            class="cf-social__link"
+                            href="{{ soc_link }}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label="{{ soc_name | escape }}"
+                          >
+                            {{-
+                              soc_icon
+                              | image_url: width: 120
+                              | image_tag:
+                                class: 'cf-social__img',
+                                loading: 'lazy',
+                                widths: '40, 80, 120',
+                                sizes: '40px',
+                                alt: ''
+                            -}}
+                          </a>
+                        </li>
+                      {%- endif -%}
+                    {%- endfor -%}
+                  </ul>
+                {%- endif -%}
+              </div>
+            {%- endif -%}
+
+            {%- if has_localization -%}
+              {%- assign form_style = '--color-shadow: rgb(var(--color-foreground-rgb) / var(--opacity-10-25));' -%}
+              {%- capture loc_label -%}
+                {%- if show_country -%}
+                  {%- case s.localization_label -%}
+                    {%- when 'country' -%}
+                      {{- localization.country.name -}}
+                    {%- when 'currency' -%}
+                      {{- localization.country.currency.iso_code }} {{ localization.country.currency.symbol -}}
+                    {%- else -%}
+                      {{- localization.country.name }} ({{ localization.country.currency.iso_code }} {{ localization.country.currency.symbol }})
+                  {%- endcase -%}
+                {%- endif -%}
+                {%- if show_country and show_language %} / {% endif -%}
+                {%- if show_language -%}
+                  {{- localization.language.iso_code | upcase -}}
+                {%- endif -%}
+              {%- endcapture -%}
+
+              {%- if show_language and show_country == false -%}
+                <div class="cf-localization cf-localization--language">
+                  {% render 'localization-form',
+                    show_country: false,
+                    show_language: true,
+                    localization_style: 'footer',
+                    form_style: form_style,
+                    form_id: section.id
+                  %}
+                </div>
+              {%- else -%}
+                <dropdown-localization-component class="cf-localization">
+                  <button
+                    type="button"
+                    class="cf-localization__button"
+                    aria-expanded="false"
+                    aria-controls="footer-country-results"
+                    ref="button"
+                    on:click="/toggleSelector"
+                  >
+                    <span
+                      class="visually-hidden"
+                      data-testid="localization-visually-hidden"
+                    >
+                      {{- 'accessibility.localization_region_and_language' | t -}}
+                      :
+                    </span>
+                    <span
+                      class="cf-localization__label"
+                      data-testid="localization-currency-code"
+                    >
+                      {{- loc_label | strip -}}
+                    </span>
+                    <span class="svg-wrapper icon-caret">
+                      {{- 'icon-caret.svg' | inline_asset_content -}}
+                    </span>
+                  </button>
+
+                  <div
+                    class="localization-wrapper color-custom-popover"
+                    hidden
+                    ref="panel"
+                  >
+                    {% render 'localization-form',
+                      show_country: show_country,
+                      show_language: show_language,
+                      localization_style: 'footer',
+                      form_style: form_style,
+                      form_id: section.id
+                    %}
+                  </div>
+                </dropdown-localization-component>
+              {%- endif -%}
+            {%- endif -%}
+          </div>
+        {%- endif -%}
+
+        {%- if s.show_copyright or has_payments -%}
+          <div class="cf-bottom__row cf-bottom__row--legal">
+            {%- if s.show_copyright -%}
+              <p class="cf-copyright">
+                {{- copyright | escape -}}
+                {%- if s.show_powered_by %} {{ powered_by_link }}{% endif -%}
+              </p>
+            {%- endif -%}
+
+            {%- if has_payments -%}
+              <div class="cf-payments">
+                {%- if s.show_payments -%}
+                  {% content_for 'block', type: 'payment-icons', id: 'cf-payments' %}
+                {%- endif -%}
+                {%- if custom_payment_count > 0 -%}
+                  <ul
+                    class="cf-payments__custom"
+                    role="list"
+                  >
+                    <li class="cf-payments__item">
+                      <picture>
+                        {%- if s.payment_1_image_mobile != blank -%}
+                          <source
+                            media="(max-width: 767px)"
+                            srcset="{{ s.payment_1_image_mobile | image_url: height: 96 }} 1x, {{ s.payment_1_image_mobile | image_url: height: 192 }} 2x"
+                          >
+                        {%- endif -%}
+                        {{-
+                          s.payment_1_image
+                          | image_url: height: 96
+                          | image_tag: class: 'cf-payments__img', loading: 'lazy', alt: s.payment_1_image.alt
+                        -}}
+                      </picture>
+                    </li>
+                  </ul>
+                {%- endif -%}
+              </div>
+            {%- endif -%}
+          </div>
+        {%- endif -%}
+
+        {%- if s.extra_text != blank -%}
+          <div class="cf-extra cf-rte">{{ s.extra_text }}</div>
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% style %}
+    .cf {
+      position: relative;
+      width: 100%;
+      color: #555555;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    .cf-top {
+      padding-inline: 52px;
+    }
+
+    .cf-top__inner {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      justify-items: center;
+      max-width: 1135px;
+      margin-inline: auto;
+      margin-bottom: -39px;
+    }
+
+    .cf-benefits {
+      display: grid;
+      grid-auto-flow: column;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px 40px;
+      max-width: 1135px;
+      margin: 0;
+      padding: 37px 40px;
+      list-style: none;
+      border-radius: 28px;
+      position: relative;
+      isolation: isolate;
+      overflow: hidden;
+
+      background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.8) 0%,
+        rgba(255, 255, 255, 0.35) 50%,
+        rgba(255, 255, 255, 0.65) 100%
+      );
+
+      backdrop-filter: blur(5px) saturate(180%);
+      -webkit-backdrop-filter: blur(5px) saturate(180%);
+      box-shadow: 0 4px 22.2px #0000000d inset;
+    }
+
+    .cf-benefits::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      padding: 2px;
+      border-radius: inherit;
+      background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 1) 0%,
+        rgba(255, 255, 255, 0.65) 45%,
+        rgba(180, 180, 180, 0.5) 100%
+      );
+      -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .cf-benefits::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.25) 0%,
+        transparent 45%,
+        rgba(255, 255, 255, 0.08) 100%
+      );
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .cf-benefit {
+      margin: 0;
+      padding: 0;
+    }
+
+    .cf-benefit__body {
+      display: grid;
+      grid-auto-flow: column;
+      align-items: center;
+      justify-content: start;
+      gap: 16px;
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .cf-benefit__body--link:hover .cf-benefit__title {
+      text-decoration: underline;
+      text-underline-offset: 0.2em;
+    }
+
+    .cf-benefit__body--link:focus-visible {
+      outline: 2px solid #111111;
+      outline-offset: 4px;
+      border-radius: 6px;
+    }
+
+    .cf-benefit__image {
+      display: block;
+      width: 42px;
+      height: auto;
+      max-width: 100%;
+      object-fit: contain;
+    }
+
+    .cf-benefit__text {
+      display: block;
+      min-width: 0;
+    }
+
+    .cf-benefit__title {
+      display: block;
+      color: #1C1917;
+      font-weight: 700;
+      font-size: 24px;
+      line-height: 29px;
+      letter-spacing: 0;
+    }
+
+    .cf-benefit__desc {
+      display: block;
+      color: #292524;
+      font-weight: 400;
+      font-size: 16px;
+      line-height: 24px;
+      letter-spacing: 0;
+    }
+
+    .cf-main {
+      padding: 48px 52px 64px;
+      background-color: #eaf3f6;
+    }
+
+    .cf-main__inner {
+      max-width: 1345px;
+      margin-inline: auto;
+    }
+
+    .cf-columns {
+      display: flex;
+      align-items: start;
+      gap: 96px;
+      padding-top: 40px;
+    }
+
+    .cf-columns .cf-brand {
+      max-width: 448px;
+    }
+
+    .cf-columns .cf-col--links {
+      max-width: 250px;
+    }
+
+    .cf-columns .cf-col--text {
+      max-width: 336px;
+    }
+
+    .cf .cf-columns.cf-columns--solo {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .cf-brand {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      justify-items: start;
+      min-width: 0;
+    }
+
+    .cf-logo {
+      margin-block-end: 50px;
+    }
+
+    .cf-logo__link {
+      display: inline-block;
+      color: #111111;
+      text-decoration: none;
+    }
+
+    .cf-logo__link:focus-visible {
+      outline: 2px solid #111111;
+      outline-offset: 4px;
+    }
+
+    .cf-logo__img {
+      display: block;
+      width: 144px;
+      max-width: 100%;
+      height: auto;
+    }
+
+    .cf-logo__text {
+      font-size: 28px;
+      font-weight: 600;
+    }
+
+    .cf-newsletter {
+      width: 100%;
+      text-align: left;
+      --color-input-background: #eef5f8;
+      --color-input-text: #111111;
+      --color-input-text-rgb: 17 17 17;
+      --color-input-border: #d9dde0;
+    }
+
+    .cf-newsletter__heading {
+      margin: 0 0 24px;
+      color: #090909;
+      font-weight: 500;
+      font-size: 22px;
+      line-height: normal;
+      letter-spacing: -0.24px;
+    }
+
+    .cf-newsletter__heading:has(+ .cf-newsletter__description) {
+      margin-block-end: 10px;
+    }
+
+    .cf-newsletter__description {
+      margin: 0 0 24px;
+    }
+
+    .cf-newsletter__form {
+      max-width: 436px;
+    }
+
+    .cf-newsletter .email-signup-block {
+      --arrow-button-size-integrated: 28px;
+      --arrow-icon-size-small: 16px;
+
+      min-width: 0;
+      width: 100%;
+    }
+
+    .cf-newsletter .email-signup__input-group {
+      position: relative;
+      max-width: 400px;
+      height: 60px;
+      border: 1px solid #0909091f;
+      border-radius: 8px;
+      background: transparent;
+    }
+
+    .cf-newsletter .email-signup__input {
+      min-height: 64px;
+      padding-inline: 22px;
+      font-size: 16px;
+    }
+
+    .cf-newsletter .email-signup__input:not(.email-signup__input--underline):not(.email-signup__input--none) {
+      border-radius: 8px;
+    }
+
+    .email-signup__input-group--integrated .email-signup__input {
+      padding: 0 21px;
+      height: 60px;
+      min-height: 60px;
+    }
+
+    .cf-newsletter .email-signup__button--arrow.email-signup__button--integrated {
+      position: absolute;
+      right: 20px;
+      margin: 0;
+      border-radius: 50%;
+      background: #0909091a;
+    }
+
+    .cf-newsletter .email-signup__input:focus-visible,
+    .cf-newsletter .email-signup__button:focus-visible {
+      outline: 0px solid #111111;
+      outline-offset: 0;
+    }
+
+    .cf-newsletter .email-signup__message {
+      margin-block-start: 10px;
+      color: #111111;
+      font-size: 14px;
+    }
+
+    .cf-col {
+      min-width: 0;
+    }
+
+    .cf-col__heading {
+      margin: 0 0 24px;
+      color: #090909;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 24px;
+      letter-spacing: 0;
+    }
+
+    .cf-links {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .cf-links li {
+      margin: 0;
+      padding: 0;
+    }
+
+    .cf-link {
+      color: #090909;
+      font-weight: 400;
+      font-size: 15px;
+      line-height: 24px;
+      letter-spacing: 0;
+      vertical-align: middle;
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+
+    .cf-link:hover {
+      color: #000000;
+      text-decoration: underline;
+      text-underline-offset: 0.2em;
+    }
+
+    .cf-link:focus-visible {
+      outline: 2px solid #111111;
+      outline-offset: 3px;
+      border-radius: 2px;
+    }
+
+    .cf-rte p {
+      color: #090909b2;
+      font-weight: 400;
+      font-size: 15px;
+      line-height: 24px;
+      letter-spacing: 0;
+      vertical-align: middle;
+    }
+
+    .cf-rte > :first-child {
+      margin-block-start: 0;
+    }
+
+    .cf-rte > :last-child {
+      margin-block-end: 0;
+    }
+
+    .cf-rte a {
+      color: #555555;
+      text-decoration: underline;
+      text-underline-offset: 0.2em;
+    }
+
+    .cf-rte a:hover {
+      color: #000000;
+    }
+
+    .cf-col--image {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      justify-items: start;
+    }
+
+    .cf-image__link {
+      display: block;
+    }
+
+    .cf-image__img {
+      display: block;
+      width: var(--cf-image-w, 160px);
+      max-width: 100%;
+      height: auto;
+    }
+
+    .cf-btn {
+      display: inline-grid;
+      place-items: center;
+      min-height: 44px;
+      padding: 10px 24px;
+      border: 1px solid #111111;
+      border-radius: 999px;
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 1.2;
+      text-decoration: none;
+      transition:
+        background-color 0.2s ease,
+        color 0.2s ease;
+    }
+
+    .cf-btn--primary {
+      background-color: #111111;
+      color: #eaf3f6;
+    }
+
+    .cf-btn--outline {
+      background-color: transparent;
+      color: #111111;
+    }
+
+    .cf-btn--primary:hover {
+      background-color: transparent;
+      color: #111111;
+    }
+
+    .cf-btn--outline:hover {
+      background-color: #111111;
+      color: #eaf3f6;
+    }
+
+    .cf-btn:focus-visible {
+      outline: 2px solid #111111;
+      outline-offset: 3px;
+    }
+
+    .cf-bottom {
+      display: flex;
+      flex-direction: column;
+      gap: 48px;
+      margin-block-start: 64px;
+    }
+
+    .cf-bottom__row {
+      display: grid;
+      align-items: center;
+      gap: 20px 32px;
+    }
+
+    .cf-bottom__row--top {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .cf-bottom__row--legal {
+      grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .cf-social {
+      --icon-size-lg: 24px;
+
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 30px;
+      color: #111111;
+    }
+
+    .cf-social__theme:empty {
+      display: none;
+    }
+
+    .cf-social__custom {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 30px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .cf-social__item {
+      margin: 0;
+      padding: 0;
+    }
+
+    .cf-social__link {
+      display: block;
+      line-height: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .cf-social__link:hover {
+      opacity: 0.7;
+    }
+
+    .cf-social__link:focus-visible {
+      outline: 2px solid #111111;
+      outline-offset: 4px;
+      border-radius: 4px;
+    }
+
+    .cf-social__img {
+      display: block;
+      width: 24px;
+      height: 24px;
+      object-fit: contain;
+    }
+
+    .cf-social .social-icons__wrapper {
+      justify-content: flex-start;
+      gap: 30px;
+    }
+
+    .cf-social a {
+      color: #111111;
+    }
+
+    .cf-social a:hover {
+      color: #000000;
+    }
+
+    .cf-social a:focus-visible {
+      outline: 2px solid #111111;
+      outline-offset: 4px;
+      border-radius: 4px;
+    }
+
+    .cf-localization {
+      position: relative;
+      grid-column: 2;
+      background-color: transparent;
+    }
+
+    .cf-localization__button {
+      display: inline-grid;
+      grid-auto-flow: column;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+      padding: 8px 0;
+      border: 0;
+      border-radius: 4px;
+      background: none;
+      color: #090909;
+      font-weight: 700;
+      font-size: 13px;
+      line-height: 21px;
+      letter-spacing: 0;
+      cursor: pointer;
+    }
+
+    .cf-localization__button:focus-visible {
+      outline: 2px solid #111111;
+      outline-offset: 3px;
+    }
+
+    .cf-localization__button .icon-caret {
+      display: grid;
+      width: 12px;
+      height: 12px;
+    }
+
+    .cf-localization__button .icon-caret svg {
+      width: 100%;
+      height: 100%;
+      transition: transform 0.2s ease;
+    }
+
+    .cf-localization__button[aria-expanded='true'] .icon-caret svg {
+      transform: rotate(180deg);
+    }
+
+    .cf-localization .localization-wrapper {
+      position: absolute;
+      inset-block: auto calc(100% + 8px);
+      inset-inline: auto 0;
+      z-index: 10;
+      min-width: 260px;
+      max-height: 27.5rem;
+      overflow: hidden;
+      border: var(--style-border-popover, 1px solid rgb(0 0 0 / 0.1));
+      border-radius: var(--style-border-radius-popover, 12px);
+      background-color: var(--color-background, #fff);
+      box-shadow: var(--shadow-popover, 0 8px 30px rgb(0 0 0 / 0.15));
+      color: var(--color-foreground, #111);
+    }
+
+    .cf-localization .localization-wrapper[hidden] {
+      display: none;
+    }
+
+    .cf-localization .localization-form__list {
+      max-height: 20.5rem;
+    }
+
+    .cf-localization .country-filter {
+      padding: 8px;
+    }
+
+    .cf-localization .country-filter__input {
+      border: 0;
+    }
+
+    .cf-localization .localization-form__list-item {
+      margin-inline: 8px;
+    }
+
+    .cf-localization--language .localization-form__select {
+      background-color: transparent;
+      color: #111111;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .cf-copyright {
+      margin: 0;
+      color: #090909b2;
+      font-weight: 400;
+      font-size: 13px;
+      line-height: 21px;
+      letter-spacing: 0;
+    }
+
+    .cf-copyright a {
+      color: #090909b2;
+      text-decoration: none;
+      text-underline-offset: 0.2em;
+    }
+
+    .cf-copyright a:hover {
+      color: #090909;
+    }
+
+    .cf-payments {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      grid-column: 2;
+      min-width: 0;
+    }
+
+    .cf-payments .payment-icons {
+      width: auto;
+      max-width: 100%;
+    }
+
+    .cf-payments .payment-icons__list {
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .cf-payments__custom {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .cf-payments__item {
+      margin: 0;
+      padding: 0;
+    }
+
+    .cf-payments__item picture {
+      display: block;
+      line-height: 0;
+    }
+
+    .cf-payments__img {
+      display: block;
+      width: auto;
+      max-width: 100%;
+      height: 24px;
+      object-fit: contain;
+    }
+
+    .cf-extra {
+      font-size: 14px;
+    }
+
+      @media screen and (max-width: 1100px) {
+        .cf-benefits {
+          gap: 30px;
+      padding: 30px 30px;
+        }
+        .cf-benefit__image {
+              width: 38px;
+        }
+        .cf-benefit__title {
+          font-size: 20px;
+        }
+        .cf-benefit__desc {
+              font-size: 14px;
+      line-height: 16px;
+        }
+        .cf-columns {
+          gap: 45px;
+        }
+        .cf-newsletter__heading {
+          font-size: 18px;
+
+        }
+        .cf-newsletter__heading {
+              margin: 0 0 15px;
+        }
+        .cf-main {
+         padding:40px 40px 20px;
+        }
+      }
+
+    @media screen and (max-width: 991px) {
+      .email-signup__input-group--integrated .email-signup__input {
+            height: 50px;
+      min-height: 50px;
+      }
+      .cf-newsletter .email-signup__input-group {
+         height: 50px;
+      }
+      .cf-bottom__row--legal {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .cf-payments .payment-icons__list,
+      .cf-payments__custom {
+        justify-content: flex-start;
+      }
+
+      .cf-benefits {
+                gap: 24px;
+          padding: 25px;
+      }
+
+      .cf-benefit__title {
+                font-size: 16px;
+          line-height: normal;
+      }
+      .cf-columns {
+                flex-wrap: wrap;
+      }
+      .cf-columns .cf-brand,
+      .cf-columns .cf-col--links {
+      max-width: calc(50% - 22.5px);
+      width: 100%;
+  }
+      .cf-columns {
+          gap: 20px 45px;
+      }
+    }
+
+    @media screen and (max-width: 767px) {
+      .cf-top {
+        padding-inline: 20px;
+      }
+
+      .cf-main {
+        padding: 32px 20px 40px;
+      }
+
+      .cf-benefits {
+
+          gap: 15px;
+          padding: 15px;
+          border-radius: 18px;
+
+      }
+      .cf-benefit__image {
+        width: 36px;
+      }
+      .cf-benefit__body {
+            gap: 10px;
+      }
+      .cf-benefit__title {
+        font-size: 16px;
+      }
+
+      .cf-benefit__desc {
+        font-size: 12px;
+      }
+
+      .cf-logo__img {
+        width: 120px;
+      }
+
+      .cf-logo__text {
+        font-size: 24px;
+      }
+
+      .cf-newsletter__heading {
+        font-size: 20px;
+      }
+
+      .cf-col__heading {
+        margin-block-end: 18px;
+        font-size: 15px;
+      }
+
+      .cf-links {
+        gap: 8.5px;
+        font-size: 15px;
+      }
+
+      .cf-link {
+        padding-block: 4px;
+      }
+
+      .cf-bottom__row {
+        justify-items: start;
+        text-align: left;
+      }
+
+      .cf-bottom__row--top,
+      .cf-bottom__row--legal {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .cf-localization {
+        grid-column: 2;
+      }
+
+      .cf-localization .localization-wrapper {
+        inset-inline: 0 auto;
+        min-width: min(260px, calc(100vw - 40px));
+      }
+
+      .cf-payments {
+        grid-column: 1;
+        width: 100%;
+        justify-content: flex-start;
+      }
+
+      .cf-payments .payment-icons__list,
+      .cf-payments__custom {
+        justify-content: flex-start;
+      }
+
+      .cf-social,
+      .cf-social__custom {
+        justify-content: flex-start;
+      }
+
+      .cf-social .social-icons__wrapper {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+      }
+
+      .cf-extra {
+        text-align: left;
+      }
+    }
+     @media screen and (max-width: 575px) {
+      .cf-benefits {
+        grid-auto-flow: unset;
+        max-width: 380px;
+        width: 100%;
+      }
+          .cf-columns .cf-brand, .cf-columns .cf-col--links {
+          max-width: 100%;
+          }
+          .cf-logo {
+      margin-block-end: 10px;
+  }
+  .cf-columns {
+        padding-top: 28px;
+  }
+      .cf-newsletter__heading {
+          margin: 0 0 16px;
+      }
+          .email-signup__input-group--integrated .email-signup__input {
+          height: 56px;
+          min-height: 56px;
+      }
+          .cf-newsletter .email-signup__input-group {
+          height: 56px;
+      }
+      .cf-col__heading {
+                margin-block-end: 16px;
+      }
+          .cf-main {
+          padding: 32px 24px;
+      }
+          .cf-localization {
+          grid-column: 1;
+      }
+      .cf-bottom {
+            gap: 32px;
+      margin-block-start: 32px;
+      }
+      .cf-columns .cf-col--text {
+      max-width: 100%;
+  }
+  .cf-link {
+          padding-block: 0;
+      }
+      .cf-bottom__row--legal {
+          display: flex;
+          flex-direction: column-reverse;
+          gap: 32px;
+      }
+        .cf-copyright {
+              width: 100%;
+        }
+        .cf-social__custom {
+              gap: 24px;
+        }
+            .cf-benefits {
+          gap: 20px;
+            }
+            .cf-bottom__row {
+                  gap: 32px;
+            }
+            .cf-payments__img {
+              height:100%;
+                      width: 100%;
+            }
+            .cf-payments__item,
+            .cf-payments__custom {
+                  width: 100%;
+            }
+
+     }
+{% endstyle %}
+
+{% schema %}
+{
+  "name": "Custom footer",
+  "tag": "div",
+  "class": "cf-section",
+  "max_blocks": 8,
+  "enabled_on": {
+    "groups": ["footer"]
+  },
+  "settings": [
+    {
+      "type": "header",
+      "content": "Benefits bar"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_benefits",
+      "label": "Show benefits bar",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Benefit 1"
+    },
+    {
+      "type": "text",
+      "id": "benefit_1_title",
+      "label": "Title",
+      "default": "Free shipping"
+    },
+    {
+      "type": "text",
+      "id": "benefit_1_description",
+      "label": "Description",
+      "default": "On orders more than $75"
+    },
+    {
+      "type": "url",
+      "id": "benefit_1_link",
+      "label": "Link (optional)",
+      "info": "For example your shipping or returns policy page."
+    },
+    {
+      "type": "image_picker",
+      "id": "benefit_1_image",
+      "label": "Custom image (optional)",
+      "info": "Shown only with Benefit 1."
+    },
+    {
+      "type": "header",
+      "content": "Benefit 2"
+    },
+    {
+      "type": "text",
+      "id": "benefit_2_title",
+      "label": "Title",
+      "default": "Easy return policy"
+    },
+    {
+      "type": "text",
+      "id": "benefit_2_description",
+      "label": "Description",
+      "default": "60-day money-back guarantee"
+    },
+    {
+      "type": "url",
+      "id": "benefit_2_link",
+      "label": "Link (optional)",
+      "info": "For example your shipping or returns policy page."
+    },
+    {
+      "type": "image_picker",
+      "id": "benefit_2_image",
+      "label": "Custom image (optional)",
+      "info": "Shown with Benefit 2."
+    },
+    {
+      "type": "header",
+      "content": "Benefit 3"
+    },
+    {
+      "type": "text",
+      "id": "benefit_3_title",
+      "label": "Title",
+      "default": "1 year warranty"
+    },
+    {
+      "type": "text",
+      "id": "benefit_3_description",
+      "label": "Description",
+      "default": "Free replacement for any product issues"
+    },
+    {
+      "type": "url",
+      "id": "benefit_3_link",
+      "label": "Link (optional)",
+      "info": "For example your shipping or returns policy page."
+    },
+    {
+      "type": "image_picker",
+      "id": "benefit_3_image",
+      "label": "Custom image (optional)",
+      "info": "Shown with Benefit 3."
+    },
+    {
+      "type": "header",
+      "content": "Logo"
+    },
+    {
+      "type": "image_picker",
+      "id": "logo",
+      "label": "Logo",
+      "info": "Leave empty to use the logo from Theme settings, or the store name as text."
+    },
+    {
+      "type": "image_picker",
+      "id": "logo_mobile",
+      "label": "Logo for mobile (optional)"
+    },
+    {
+      "type": "url",
+      "id": "logo_link",
+      "label": "Logo link",
+      "info": "Leave empty to link to the home page."
+    },
+    {
+      "type": "header",
+      "content": "Newsletter"
+    },
+    {
+      "type": "paragraph",
+      "content": "The email form is Horizon's native Email signup block. Select it in the section's block list to change the button label, arrow or style."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_newsletter",
+      "label": "Show newsletter signup",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "newsletter_heading",
+      "label": "Heading",
+      "default": "Sign up for new stories and personal offers"
+    },
+    {
+      "type": "richtext",
+      "id": "newsletter_description",
+      "label": "Description (optional)"
+    },
+    {
+      "type": "header",
+      "content": "Social links and country selector"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_social",
+      "label": "Show theme social icons",
+      "info": "Add the profile URLs in the Social media links block of this section.",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_localization",
+      "label": "Show country/region and currency selector",
+      "info": "Only appears when more than one country/region (or language) is enabled in Shopify Markets.",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_country",
+      "label": "Country/region and currency",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_language",
+      "label": "Language",
+      "default": false
+    },
+    {
+      "type": "select",
+      "id": "localization_label",
+      "label": "Selector label",
+      "options": [
+        {
+          "value": "full",
+          "label": "United States (USD $)"
+        },
+        {
+          "value": "country",
+          "label": "United States"
+        },
+        {
+          "value": "currency",
+          "label": "USD $"
+        }
+      ],
+      "default": "full"
+    },
+    {
+      "type": "header",
+      "content": "Custom social icons"
+    },
+    {
+      "type": "paragraph",
+      "content": "Add your own icons and links. They show next to the theme social icons. A slot appears when it has both an icon and a link. Use a square image."
+    },
+    {
+      "type": "header",
+      "content": "Social icon 1"
+    },
+    {
+      "type": "image_picker",
+      "id": "social_1_icon",
+      "label": "Icon"
+    },
+    {
+      "type": "url",
+      "id": "social_1_link",
+      "label": "Link"
+    },
+    {
+      "type": "header",
+      "content": "Social icon 2"
+    },
+    {
+      "type": "image_picker",
+      "id": "social_2_icon",
+      "label": "Icon"
+    },
+    {
+      "type": "url",
+      "id": "social_2_link",
+      "label": "Link"
+    },
+    {
+      "type": "header",
+      "content": "Social icon 3"
+    },
+    {
+      "type": "image_picker",
+      "id": "social_3_icon",
+      "label": "Icon"
+    },
+    {
+      "type": "url",
+      "id": "social_3_link",
+      "label": "Link"
+    },
+    {
+      "type": "header",
+      "content": "Social icon 4"
+    },
+    {
+      "type": "image_picker",
+      "id": "social_4_icon",
+      "label": "Icon"
+    },
+    {
+      "type": "url",
+      "id": "social_4_link",
+      "label": "Link"
+    },
+    {
+      "type": "header",
+      "content": "Social icon 5"
+    },
+    {
+      "type": "image_picker",
+      "id": "social_5_icon",
+      "label": "Icon"
+    },
+    {
+      "type": "url",
+      "id": "social_5_link",
+      "label": "Link"
+    },
+    {
+      "type": "header",
+      "content": "Social icon 6"
+    },
+    {
+      "type": "image_picker",
+      "id": "social_6_icon",
+      "label": "Icon"
+    },
+    {
+      "type": "url",
+      "id": "social_6_link",
+      "label": "Link"
+    },
+    {
+      "type": "header",
+      "content": "Copyright and payments"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_copyright",
+      "label": "Show copyright",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "copyright_text",
+      "label": "Copyright text",
+      "info": "{year} becomes the current year and {shop} becomes your store name.",
+      "default": "© {year}, {shop}."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_powered_by",
+      "label": "Show “Powered by Shopify”",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_payments",
+      "label": "Show theme payment icons",
+      "default": true
+    },
+    {
+      "type": "richtext",
+      "id": "extra_text",
+      "label": "Additional text (optional)",
+      "info": "Shown below the copyright row. Use it for legal notes or a short announcement."
+    },
+    {
+      "type": "header",
+      "content": "Custom payment image"
+    },
+    {
+      "type": "paragraph",
+      "content": "Upload your own payment logo. It shows after the theme payment icons."
+    },
+    {
+      "type": "image_picker",
+      "id": "payment_1_image",
+      "label": "Payment image"
+    },
+    {
+      "type": "image_picker",
+      "id": "payment_1_image_mobile",
+      "label": "Payment image for mobile (optional)",
+      "info": "Shown on screens up to 767px wide. Leave empty to use the main image."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "_cf-link-column"
+    },
+    {
+      "type": "_cf-text"
+    },
+    {
+      "type": "_cf-image"
+    },
+    {
+      "type": "_cf-button"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Custom footer",
+      "category": "Footer",
+      "blocks": [
+        {
+          "type": "_cf-link-column"
+        },
+        {
+          "type": "_cf-text"
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

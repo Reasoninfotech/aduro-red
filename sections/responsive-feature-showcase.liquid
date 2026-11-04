@@ -1,0 +1,442 @@
+{% liquid
+  assign has_media = false
+  for block in section.blocks
+    if block.settings.desktop_image != blank or block.settings.mobile_image != blank
+      assign has_media = true
+    endif
+  endfor
+%}
+
+<section
+  id="FeatureShowcase-{{ section.id }}"
+  class="feature-showcase"
+  data-trigger="{{ section.settings.trigger }}"
+  data-autoplay="{{ section.settings.autoplay }}"
+  data-speed="{{ section.settings.autoplay_speed }}"
+>
+  <div class="common-container feature-showcase__inner">
+    <div class="feature-showcase__copy">
+      {% if section.settings.description != blank %}
+        <div class="feature-showcase__description rte">
+          {{ section.settings.description }}
+        </div>
+      {% endif %}
+
+      {% if section.blocks.size > 0 %}
+        <div
+          class="feature-showcase__statements"
+          role="tablist"
+          aria-label="Product highlights"
+        >
+          {% for block in section.blocks %}
+            <button
+              type="button"
+              role="tab"
+              id="FSTab-{{ block.id }}"
+              class="feature-showcase__line{% if forloop.first %} is-active{% endif %}"
+              aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"
+              aria-controls="FSPanel-{{ block.id }}"
+              tabindex="{% if forloop.first %}0{% else %}-1{% endif %}"
+              {{ block.shopify_attributes }}
+            >{{ block.settings.statement | escape }}</button>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    {% if has_media or request.design_mode %}
+      <div class="feature-showcase__media">
+        {% for block in section.blocks %}
+          {% liquid
+            assign d_image = block.settings.desktop_image
+            assign m_image = block.settings.mobile_image
+            assign img_loading = 'lazy'
+            if forloop.first
+              assign img_loading = 'eager'
+            endif
+          %}
+          <div
+            id="FSPanel-{{ block.id }}"
+            class="feature-showcase__panel{% if forloop.first %} is-active{% endif %}"
+            role="tabpanel"
+            aria-labelledby="FSTab-{{ block.id }}"
+            aria-hidden="{% if forloop.first %}false{% else %}true{% endif %}"
+          >
+            {% if m_image != blank %}
+              <picture>
+                <source
+                  media="(max-width: 749px)"
+                  srcset="
+                    {{ m_image | image_url: width: 400 }} 400w,
+                    {{ m_image | image_url: width: 600 }} 600w,
+                    {{ m_image | image_url: width: 800 }} 800w
+                  "
+                  sizes="100vw"
+                >
+                {% if d_image != blank %}
+                  {% assign d_alt = d_image.alt | default: block.settings.statement %}
+                  {{
+                    d_image
+                    | image_url: width: 1400
+                    | image_tag:
+                      class: 'feature-showcase__image',
+                      widths: '500, 700, 900, 1100, 1400',
+                      sizes: '(min-width: 750px) 48vw, 100vw',
+                      loading: img_loading,
+                      alt: d_alt
+                  }}
+                {% else %}
+                  {% assign m_alt = m_image.alt | default: block.settings.statement %}
+                  {{
+                    m_image
+                    | image_url: width: 1200
+                    | image_tag:
+                      class: 'feature-showcase__image',
+                      widths: '400, 600, 800, 1000, 1200',
+                      sizes: '100vw',
+                      loading: img_loading,
+                      alt: m_alt
+                  }}
+                {% endif %}
+              </picture>
+            {% elsif d_image != blank %}
+              {% assign d_alt = d_image.alt | default: block.settings.statement %}
+              {{
+                d_image
+                | image_url: width: 1400
+                | image_tag:
+                  class: 'feature-showcase__image',
+                  widths: '500, 700, 900, 1100, 1400',
+                  sizes: '(min-width: 750px) 48vw, 100vw',
+                  loading: img_loading,
+                  alt: d_alt
+              }}
+            {% elsif request.design_mode %}
+              {{ 'image' | placeholder_svg_tag: 'feature-showcase__placeholder' }}
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+</section>
+
+<script>
+  (function () {
+    var root = document.getElementById('FeatureShowcase-{{ section.id }}');
+    if (!root) return;
+
+    var tabs = Array.prototype.slice.call(root.querySelectorAll('.feature-showcase__line'));
+    var panels = Array.prototype.slice.call(root.querySelectorAll('.feature-showcase__panel'));
+    if (tabs.length < 2) return;
+
+    var list = root.querySelector('.feature-showcase__statements');
+    var current = 0;
+    var timer = null;
+    var hoverMode = root.getAttribute('data-trigger') === 'hover';
+    var autoplay = root.getAttribute('data-autoplay') === 'true';
+    var speed = (parseInt(root.getAttribute('data-speed'), 10) || 4) * 1000;
+    var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var canHover = window.matchMedia('(hover: hover)').matches;
+
+    if (reduceMotion || (window.Shopify && window.Shopify.designMode)) autoplay = false;
+
+    function activate(index) {
+      current = index;
+      tabs.forEach(function (tab, n) {
+        var on = n === index;
+        tab.classList.toggle('is-active', on);
+        tab.setAttribute('aria-selected', on ? 'true' : 'false');
+        tab.tabIndex = on ? 0 : -1;
+      });
+      panels.forEach(function (panel, n) {
+        var on = n === index;
+        panel.classList.toggle('is-active', on);
+        panel.setAttribute('aria-hidden', on ? 'false' : 'true');
+      });
+    }
+
+    function stop() {
+      if (timer) { clearInterval(timer); timer = null; }
+    }
+
+    function start() {
+      if (!autoplay) return;
+      stop();
+      timer = setInterval(function () {
+        activate((current + 1) % tabs.length);
+      }, speed);
+    }
+
+    tabs.forEach(function (tab, n) {
+      tab.addEventListener('click', function () { activate(n); });
+      if (hoverMode && canHover) {
+        tab.addEventListener('mouseenter', function () { activate(n); });
+      }
+    });
+
+    list.addEventListener('keydown', function (e) {
+      var step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key];
+      if (!step) return;
+      e.preventDefault();
+      var next = (current + step + tabs.length) % tabs.length;
+      activate(next);
+      tabs[next].focus();
+    });
+
+    root.addEventListener('mouseenter', stop);
+    root.addEventListener('mouseleave', start);
+    root.addEventListener('focusin', stop);
+    root.addEventListener('focusout', start);
+
+    /* Theme editor: selecting a block shows its image */
+    function onBlockSelect(e) {
+      if (!root.isConnected) {
+        document.removeEventListener('shopify:block:select', onBlockSelect);
+        return;
+      }
+      var i = tabs.indexOf(e.target);
+      if (i > -1) activate(i);
+    }
+    document.addEventListener('shopify:block:select', onBlockSelect);
+
+    start();
+  })();
+</script>
+
+{% style %}
+
+  .feature-showcase__inner {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 56px;
+    padding-top: 32px;
+    padding-bottom: 32px;
+  }
+
+  .feature-showcase__copy {
+    width:calc(50% - 24px);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 28px;
+  }
+
+  .feature-showcase__description p {
+    font-weight: 400;
+    font-size: 18px;
+    line-height: 27px;
+    letter-spacing: 0;
+    color: #292524;
+    max-width: 470px;
+  }
+
+
+  .feature-showcase__statements {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: auto;
+  }
+
+  .feature-showcase__line {
+     appearance: none;
+    background: none;
+    border: 0;
+    margin: 0;
+    padding: 0;
+    text-align: left;
+    font-weight: 500;
+    font-size: 52px;
+    line-height: 58px;
+    letter-spacing: -1px;
+    vertical-align: middle;
+        color: #A8A29E;
+    cursor: pointer;
+    overflow-wrap: anywhere;
+    transition: color 180ms ease;
+  }
+
+  .feature-showcase__line.is-active {
+    color: #1C1917;
+  }
+
+  .feature-showcase__line:focus-visible {
+    outline: 0px solid #111111;
+  }
+
+  .feature-showcase__media {
+    width:calc(50% - 24px);
+    border-radius: 16px;
+  }
+
+  .feature-showcase__panel {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 350ms ease, visibility 0s linear 350ms;
+    display:none;
+  }
+
+  .feature-showcase__panel.is-active {
+    display:block;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 350ms ease;
+  }
+
+  .feature-showcase__panel picture {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .feature-showcase__image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center center;
+  }
+@media screen and (max-width: 1199px) {
+    .feature-showcase__line {
+        font-size: 42px;
+        line-height: 42px;
+    }
+}
+  @media screen and (max-width: 991px) {
+    .feature-showcase__inner {
+        gap:24px;
+    }
+    .feature-showcase__media,
+    .feature-showcase__copy {
+            width: calc(50% - 12px);
+    }
+        .feature-showcase__line {
+        font-size: 30px;
+        line-height: 30px;
+    }
+    .feature-showcase__description p {
+            font-size: 16px;
+    line-height: 20px;
+    }
+  }
+  @media screen and (max-width: 767px) {
+    .feature-showcase__inner {
+            flex-direction: column;
+            padding-top: 24px;
+    padding-bottom: 24px;
+    }
+      .feature-showcase__media,
+    .feature-showcase__copy {
+            width: 100%;
+    }
+  }
+  @media screen and (max-width: 575px) {
+    .feature-showcase__description p {
+        line-height: 24px;
+    }
+    .feature-showcase__copy {
+        gap: 24px;
+    }
+        .feature-showcase__line {
+        font-size: 28px;
+        line-height: 31px;
+    }
+    
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .feature-showcase__line,
+    .feature-showcase__panel,
+    .feature-showcase__panel.is-active {
+      transition: none;
+    }
+  }
+{% endstyle %}
+
+{% schema %}
+{
+  "name": "Feature showcase",
+  "tag": "section",
+  "class": "section-feature-showcase",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Content"
+    },
+    {
+      "type": "richtext",
+      "id": "description",
+      "label": "Description",
+      "default": "<p>Advanced light therapy designed to feel effortless for at-home clinical treatments.</p>"
+    },
+    {
+      "type": "header",
+      "content": "Behavior"
+    },
+    {
+      "type": "select",
+      "id": "trigger",
+      "label": "Change image on",
+      "options": [
+        { "value": "click", "label": "Click / tap" },
+        { "value": "hover", "label": "Hover (desktop) + click" }
+      ],
+      "default": "click"
+    },
+    {
+      "type": "checkbox",
+      "id": "autoplay",
+      "label": "Auto-rotate statements",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "autoplay_speed",
+      "label": "Auto-rotate speed",
+      "min": 2,
+      "max": 10,
+      "step": 1,
+      "unit": "s",
+      "default": 4
+    }
+  ],
+  "blocks": [
+    {
+      "type": "feature",
+      "name": "Feature",
+      "settings": [
+        {
+          "type": "text",
+          "id": "statement",
+          "label": "Statement",
+          "default": "New statement"
+        },
+        {
+          "type": "image_picker",
+          "id": "desktop_image",
+          "label": "Desktop image"
+        },
+        {
+          "type": "image_picker",
+          "id": "mobile_image",
+          "label": "Mobile image (optional)"
+        }
+      ]
+    }
+  ],
+  "max_blocks": 6,
+  "presets": [
+    {
+      "name": "Feature showcase",
+      "blocks": [
+        { "type": "feature", "settings": { "statement": "7+1 wavelengths" } },
+        { "type": "feature", "settings": { "statement": "11 targeted programs" } },
+        { "type": "feature", "settings": { "statement": "1 simple routine" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

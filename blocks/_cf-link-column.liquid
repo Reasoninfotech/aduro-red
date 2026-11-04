@@ -1,0 +1,63 @@
+{%- comment -%}
+  Footer link column for the Custom footer section. Styles live in sections/custom-footer.liquid (.cf-*).
+{%- endcomment -%}
+{%- assign menu = block.settings.menu -%}
+<nav
+  class="cf-col cf-col--links"
+  {% if block.settings.heading != blank %}
+    aria-labelledby="cf-heading-{{ block.id }}"
+  {% else %}
+    aria-label="{{ menu.title | default: shop.name | escape }}"
+  {% endif %}
+  {{ block.shopify_attributes }}
+>
+  {%- if block.settings.heading != blank -%}
+    <h2
+      class="cf-col__heading"
+      id="cf-heading-{{ block.id }}"
+    >
+      {{- block.settings.heading | escape -}}
+    </h2>
+  {%- endif -%}
+  {%- if menu != blank and menu.links.size > 0 -%}
+    <ul
+      class="cf-links"
+      role="list"
+    >
+      {%- for link in menu.links -%}
+        <li>
+          <a
+            class="cf-link"
+            href="{{ link.url }}"
+            {% if link.current %}
+              aria-current="page"
+            {% endif %}
+          >
+            {{- link.title | escape -}}
+          </a>
+        </li>
+      {%- endfor -%}
+    </ul>
+  {%- endif -%}
+</nav>
+
+{% schema %}
+{
+  "name": "Link column",
+  "tag": null,
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Shop"
+    },
+    {
+      "type": "link_list",
+      "id": "menu",
+      "label": "Menu",
+      "default": "footer"
+    }
+  ]
+}
+{% endschema %}

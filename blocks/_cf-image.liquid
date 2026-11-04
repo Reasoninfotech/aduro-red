@@ -1,0 +1,86 @@
+{%- comment -%}
+  Footer image (secondary logo, badge or promo) for the Custom footer section. Styles live in sections/custom-footer.liquid (.cf-*).
+{%- endcomment -%}
+{%- assign img = block.settings.image -%}
+{%- assign img_alt = block.settings.alt | default: img.alt -%}
+{%- if img != blank -%}
+  {%- capture image_markup -%}
+    <picture>
+      {%- if block.settings.image_mobile != blank -%}
+        <source
+          media="(max-width: 749px)"
+          srcset="{{ block.settings.image_mobile | image_url: width: 600 }} 1x, {{ block.settings.image_mobile | image_url: width: 1200 }} 2x"
+        >
+      {%- endif -%}
+      {{
+        img
+        | image_url: width: 1000
+        | image_tag:
+          class: 'cf-image__img',
+          alt: img_alt,
+          loading: 'lazy',
+          widths: '200, 400, 600, 800, 1000',
+          sizes: '(max-width: 749px) 80vw, 400px'
+      }}
+    </picture>
+  {%- endcapture -%}
+{%- endif -%}
+<div
+  class="cf-col cf-col--image"
+  style="--cf-image-w: {{ block.settings.width }}px;"
+  {{ block.shopify_attributes }}
+>
+  {%- if img != blank -%}
+    {%- if block.settings.link != blank -%}
+      <a
+        class="cf-image__link"
+        href="{{ block.settings.link }}"
+      >
+        {{- image_markup -}}
+      </a>
+    {%- else -%}
+      {{- image_markup -}}
+    {%- endif -%}
+  {%- endif -%}
+</div>
+
+{% schema %}
+{
+  "name": "Image",
+  "tag": null,
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Image",
+      "info": "Use for a secondary logo, badge or promotional image."
+    },
+    {
+      "type": "image_picker",
+      "id": "image_mobile",
+      "label": "Image for mobile (optional)"
+    },
+    {
+      "type": "text",
+      "id": "alt",
+      "label": "Alternative text",
+      "info": "Describe the image for screen readers."
+    },
+    {
+      "type": "url",
+      "id": "link",
+      "label": "Link (optional)"
+    },
+    {
+      "type": "range",
+      "id": "width",
+      "label": "Width",
+      "min": 40,
+      "max": 400,
+      "step": 4,
+      "unit": "px",
+      "default": 160
+    }
+  ]
+}
+{% endschema %}

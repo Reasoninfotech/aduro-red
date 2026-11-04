@@ -1,0 +1,1046 @@
+{%- comment -%}
+  Section: Beauty insiders (Social proof + Customer results)
+  Theme: Shopify Horizon
+  Upload to: /sections/beauty-insiders.liquid
+  Slider: Swiper 11.1.14 (loaded from jsDelivr, only once per page)
+{%- endcomment -%}
+
+{%- liquid
+  assign s = section.settings
+  assign card_position = s.card_position
+  assign show_card = s.show_social_card
+  if s.social_image_desktop == blank and s.social_image_mobile == blank
+    assign has_social_image = false
+  else
+    assign has_social_image = true
+  endif
+
+  assign social_count = 0
+  assign review_count = 0
+  for block in section.blocks
+    case block.type
+      when 'social_image'
+        assign social_count = social_count | plus: 1
+      when 'review'
+        assign review_count = review_count | plus: 1
+    endcase
+  endfor
+  if social_count > 0
+    assign has_social_image = true
+  endif
+-%}
+
+<section
+  id="bis-{{ section.id }}"
+  class="bis"
+>
+  <div class="bis__inner common-container">
+    <div
+      class="bis__grid{% if show_card %} bis__grid--card-{{ card_position }}{% else %} bis__grid--no-card{% endif %}"
+    >
+      {%- comment -%} ───────── INTRO: heading, content, rating ───────── {%- endcomment -%}
+      <div class="bis__intro">
+        {%- if s.heading != blank -%}
+          <{{ s.heading_tag }} class="bis__heading">{{ s.heading }}</{{ s.heading_tag }}>
+        {%- endif -%}
+
+        {%- if s.content != blank -%}
+          <div class="bis__content rte">{{ s.content }}</div>
+        {%- endif -%}
+
+        {%- if s.show_rating -%}
+          <div class="bis__rating">
+            <span class="bis__stars" role="img" aria-label="{{ s.rating }} out of 5 stars">
+              {%- for i in (1..5) -%}
+                {%- liquid
+                  assign star_fill = s.rating | minus: forloop.index0 | times: 100
+                  if star_fill > 100
+                    assign star_fill = 100
+                  endif
+                  if star_fill < 0
+                    assign star_fill = 0
+                  endif
+                -%}
+                <svg
+                  class="bis__star"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <defs>
+                    <linearGradient id="bis-star-{{ section.id }}-{{ forloop.index }}" x1="0" x2="1" y1="0" y2="0">
+                      <stop offset="{{ star_fill }}%" stop-color="#FFC107"/>
+                      <stop offset="{{ star_fill }}%" stop-color="#dcdcdc"/>
+                    </linearGradient>
+                  </defs>
+                  <path
+                    fill="url(#bis-star-{{ section.id }}-{{ forloop.index }})"
+                    d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"
+                  />
+                </svg>
+              {%- endfor -%}
+            </span>
+            {%- if s.rating_text != blank -%}
+              <span class="bis__rating-text">{{ s.rating_text }}</span>
+            {%- endif -%}
+            {%- if s.rating_link_label != blank -%}
+              <a class="bis__rating-link" href="{{ s.rating_link | default: '#' }}">{{ s.rating_link_label }}</a>
+            {%- endif -%}
+          </div>
+        {%- endif -%}
+      </div>
+
+      {%- comment -%} ───────── SOCIAL CARD ───────── {%- endcomment -%}
+      {%- if show_card -%}
+        <div class="bis__social">
+          <div class="bis__card">
+            <bis-gallery class="bis-gallery">
+              <div class="bis__media bis__media--social{% if has_social_image == false %} bis__media--empty{% endif %}">
+                {%- if social_count > 0 -%}
+                  <div
+                    class="bis-gallery__track"
+                    data-gallery-track
+                    {% if social_count > 1 %}
+                      tabindex="0"
+                    {% endif %}
+                  >
+                    {%- for block in section.blocks -%}
+                      {%- if block.type != 'social_image' -%}{%- continue -%}{%- endif -%}
+                      {%- liquid
+                        assign g_d = block.settings.image_desktop
+                        assign g_m = block.settings.image_mobile
+                        if g_d == blank
+                          assign g_d = g_m
+                        endif
+                        if g_m == blank
+                          assign g_m = g_d
+                        endif
+                      -%}
+                      <div
+                        class="bis-gallery__slide{% if g_d == blank %} bis__media--empty{% endif %}"
+                        data-gallery-slide
+                        {{ block.shopify_attributes }}
+                      >
+                        {%- if g_d != blank -%}
+                          <picture>
+                            <source
+                              media="(max-width: 749px)"
+                              srcset="{{ g_m | image_url: width: 480 }} 480w, {{ g_m | image_url: width: 750 }} 750w, {{ g_m | image_url: width: 1100 }} 1100w"
+                              sizes="100vw"
+                            >
+                            <img
+                              src="{{ g_d | image_url: width: 1000 }}"
+                              srcset="{{ g_d | image_url: width: 600 }} 600w, {{ g_d | image_url: width: 900 }} 900w, {{ g_d | image_url: width: 1200 }} 1200w, {{ g_d | image_url: width: 1600 }} 1600w"
+                              sizes="(min-width: 750px) 50vw, 100vw"
+                              width="{{ g_d.width }}"
+                              height="{{ g_d.height }}"
+                              alt="{{ g_d.alt | default: s.heading | strip_html | escape }}"
+                              {% unless forloop.first %}
+                                loading="lazy"
+                              {% endunless %}
+                            >
+                          </picture>
+                        {%- endif -%}
+                      </div>
+                    {%- endfor -%}
+                  </div>
+                {%- elsif has_social_image -%}
+                  {%- liquid
+                    assign d_img = s.social_image_desktop
+                    assign m_img = s.social_image_mobile
+                    if d_img == blank
+                      assign d_img = m_img
+                    endif
+                    if m_img == blank
+                      assign m_img = d_img
+                    endif
+                  -%}
+                  <picture>
+                    <source
+                      media="(max-width: 749px)"
+                      srcset="{{ m_img | image_url: width: 480 }} 480w, {{ m_img | image_url: width: 750 }} 750w, {{ m_img | image_url: width: 1100 }} 1100w"
+                      sizes="100vw"
+                    >
+                    <img
+                      src="{{ d_img | image_url: width: 1000 }}"
+                      srcset="{{ d_img | image_url: width: 600 }} 600w, {{ d_img | image_url: width: 900 }} 900w, {{ d_img | image_url: width: 1200 }} 1200w, {{ d_img | image_url: width: 1600 }} 1600w"
+                      sizes="(min-width: 750px) 50vw, 100vw"
+                      width="{{ d_img.width }}"
+                      height="{{ d_img.height }}"
+                      alt="{{ d_img.alt | default: s.heading | strip_html | escape }}"
+                      loading="lazy"
+                    >
+                  </picture>
+                {%- endif -%}
+              </div>
+
+              {%- if social_count > 1 -%}
+                <div class="bis-gallery__dots">
+                  {%- for i in (1..social_count) -%}
+                    <button
+                      type="button"
+                      class="bis-gallery__dot{% if forloop.first %} is-active{% endif %}"
+                      data-dot
+                      aria-label="Image {{ i }}"
+                    ></button>
+                  {%- endfor -%}
+                </div>
+              {%- endif -%}
+            </bis-gallery>
+          </div>
+        </div>
+      {%- endif -%}
+
+      {%- comment -%} ───────── CUSTOMER RESULTS SLIDER (Swiper) ───────── {%- endcomment -%}
+      {%- if review_count > 0 -%}
+        <div class="bis__results">
+          <bis-slider class="bis-slider">
+            <div class="bis-slider__head">
+              {%- if s.results_label != blank -%}
+                <span class="bis-slider__label">{{ s.results_label }}</span>
+              {%- endif -%}
+              {%- if s.show_arrows -%}
+                <div class="bis-slider__arrows">
+                  <button
+                    type="button"
+                    class="bis-slider__arrow bis-slider__arrow--prev"
+                    data-prev
+                    aria-label="Previous"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="16"
+                      height="16"
+                      aria-hidden="true"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="M15 5l-7 7 7 7"/>
+                    </svg>
+                  </button>
+                  <button type="button" class="bis-slider__arrow bis-slider__arrow--next" data-next aria-label="Next">
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="16"
+                      height="16"
+                      aria-hidden="true"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="M9 5l7 7-7 7"/>
+                    </svg>
+                  </button>
+                </div>
+              {%- endif -%}
+            </div>
+
+            <div class="bis-slider__track swiper" data-track>
+              <div class="swiper-wrapper">
+                {%- for block in section.blocks -%}
+                  {%- if block.type != 'review' -%}{%- continue -%}{%- endif -%}
+                  {%- liquid
+                    assign b = block.settings
+                    assign has_img = false
+                    if b.image_desktop != blank or b.image_mobile != blank
+                      assign has_img = true
+                    endif
+                    assign rd = b.image_desktop
+                    assign rm = b.image_mobile
+                    if rd == blank
+                      assign rd = rm
+                    endif
+                    if rm == blank
+                      assign rm = rd
+                    endif
+                  -%}
+                  <article class="bis-review swiper-slide" data-card {{ block.shopify_attributes }}>
+                    <div class="bis__media bis__media--review{% if has_img == false %} bis__media--empty{% endif %}">
+                      {%- if has_img -%}
+                        <picture>
+                          <source
+                            media="(max-width: 749px)"
+                            srcset="{{ rm | image_url: width: 400 }} 400w, {{ rm | image_url: width: 700 }} 700w, {{ rm | image_url: width: 1000 }} 1000w"
+                            sizes="80vw"
+                          >
+                          <img
+                            src="{{ rd | image_url: width: 600 }}"
+                            srcset="{{ rd | image_url: width: 400 }} 400w, {{ rd | image_url: width: 600 }} 600w, {{ rd | image_url: width: 900 }} 900w"
+                            sizes="330px"
+                            width="{{ rd.width }}"
+                            height="{{ rd.height }}"
+                            alt="{{ rd.alt | default: b.title | escape }}"
+                            loading="lazy"
+                          >
+                        </picture>
+                      {%- endif -%}
+                    </div>
+
+                    <div class="bis-review__body">
+                      {%- if b.title != blank -%}
+                        <h3 class="bis-review__title">{{ b.title }}</h3>
+                      {%- endif -%}
+
+                      <p class="bis-review__meta">
+                        {%- if b.author != blank -%}
+                          <span>{{ b.author }}</span>
+                        {%- endif -%}
+                        {%- if b.author != blank and b.show_verified and b.verified_label != blank -%}
+                          <span class="bis-review__sep" aria-hidden="true"></span>
+                        {%- endif -%}
+                        {%- if b.show_verified and b.verified_label != blank -%}
+                          <span class="bis-review__verified">
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 14 14"
+                              fill="none"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path d="M6.99996 12.8334C10.2216 12.8334 12.8333 10.2217 12.8333 7.00008C12.8333 3.77842 10.2216 1.16675 6.99996 1.16675C3.7783 1.16675 1.16663 3.77842 1.16663 7.00008C1.16663 10.2217 3.7783 12.8334 6.99996 12.8334Z" fill="#009F03"/>
+                              <path d="M4.375 7.29167L6.125 9.04167L9.625 5.25" stroke-width="1.16667" stroke="white"/>
+                            </svg>
+                            {{ b.verified_label }}
+                          </span>
+                        {%- endif -%}
+                      </p>
+
+                      {%- if b.text != blank -%}
+                        <p class="bis-review__text">{{ b.text }}</p>
+                      {%- endif -%}
+                    </div>
+                  </article>
+                {%- endfor -%}
+              </div>
+              <div class="swiper-pagination"></div>
+            </div>
+          </bis-slider>
+        </div>
+      {%- endif -%}
+    </div>
+  </div>
+</section>
+
+{% stylesheet %}
+.bis {
+      padding: 32px 0;
+}
+  .bis__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      'intro'
+      'social'
+      'results';
+    column-gap: 48px;
+    row-gap: 32px;
+    align-items: start;
+  }
+
+  .bis__grid--card-left {
+    grid-template-areas:
+      'social intro'
+      'social results';
+  }
+
+  .bis__grid--card-right {
+    grid-template-areas:
+      'intro social'
+      'results social';
+  }
+
+  .bis__grid--no-card {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'intro'
+      'results';
+  }
+
+  .bis__intro {
+    grid-area: intro;
+    min-width: 0;
+  }
+
+  .bis__social {
+    grid-area: social;
+    min-width: 0;
+  }
+
+  .bis__results {
+    grid-area: results;
+    min-width: 0;
+  }
+
+  /* ───────── Intro ───────── */
+  .bis__heading {
+    margin: 0 0 16px;
+    font-weight: 500;
+    font-size: 52px;
+    line-height: 58px;
+    letter-spacing: -1px;
+    max-width: 434px;
+    color: #1C1917;
+  }
+
+  .bis__content p {
+    margin: 0 0 16px;
+    font-weight: 400;
+    font-size: 22px;
+    line-height: 29px;
+    letter-spacing: 0;
+    color: #4A4A48;
+  }
+
+
+  /* Rating */
+  .bis__rating {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 8px;
+  }
+
+  .bis__stars {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    height: 16px;
+  }
+
+  .bis__star {
+    display: block;
+    flex: none;
+    width: 18px;
+    height: 16px;
+  }
+
+  .bis__rating-text {
+     text-transform: uppercase;
+    font-weight: 700;
+    font-size: 13px;
+    line-height: 100%;
+    letter-spacing: 0;
+    color: #111111;
+  }
+
+  .bis__rating-link {
+    flex-basis: auto;
+    font-size: 14px;
+    line-height: 1.2;
+    color: #111111;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .bis__rating-link:hover { text-decoration-thickness: 2px; }
+
+  /* ───────── Media (shared) ───────── */
+  .bis__media {
+    position: relative;
+    overflow: hidden;
+    border-radius: 10px;
+    background-color: #fff;
+  }
+
+  .bis__media picture,
+  .bis__media img {
+    display: block;
+    width: 100%;
+  }
+
+  .bis__media img {
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Transparent-checkerboard placeholder */
+  .bis__media--empty {
+    background-color: #fff;
+    background-image:
+      linear-gradient(45deg, #e8e8e8 25%, transparent 25%, transparent 75%, #e8e8e8 75%),
+      linear-gradient(45deg, #e8e8e8 25%, transparent 25%, transparent 75%, #e8e8e8 75%);
+    background-size: 24px 24px;
+    background-position: 0 0, 12px 12px;
+  }
+
+  /* ───────── Social card ───────── */
+  .bis__card {
+    position: relative;
+    border-radius: 16px;
+    box-shadow: 0 0 0 1px rgba(17, 17, 17, 0.06), 0 6px 24px rgba(17, 17, 17, 0.08);
+    background: #fff;
+  }
+
+  .bis-gallery {
+    position: relative;
+    display: block;
+  }
+
+  .bis__media--social {
+    border-radius: 16px;
+  }
+
+  .bis__media--social.bis__media--empty {
+    aspect-ratio: 1 / 1;
+  }
+
+  .bis__media--social picture,
+  .bis__media--social img {
+    height: auto;
+  }
+
+  .bis-gallery__track {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .bis-gallery__track::-webkit-scrollbar { display: none; }
+
+  .bis-gallery__slide {
+    flex: 0 0 100%;
+    min-width: 0;
+    scroll-snap-align: start;
+  }
+
+  .bis-gallery__slide.bis__media--empty { aspect-ratio: 1 / 1; }
+
+  .bis-gallery__dots {
+    position: absolute;
+    left: 50%;
+    bottom: 12px;
+    z-index: 2;
+    display: flex;
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.85);
+    transform: translateX(-50%);
+  }
+
+  .bis-gallery__dot {
+    width: 6px;
+    height: 6px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(17, 17, 17, 0.25);
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+  }
+
+  .bis-gallery__dot.is-active {
+    background: #111111;
+    transform: scale(1.25);
+  }
+
+  /* ───────── Customer results ───────── */
+  .bis-slider { display: block; }
+.bis-slider .swiper  {
+  display: none;
+}
+.bis-slider .swiper.swiper-initialized  {
+  display: block;
+}
+  .bis-slider__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .bis-slider__label {
+    text-transform: uppercase;
+    color: #4A4A48;
+    font-weight: 400;
+    font-size: 12px;
+    line-height: 19px;
+    letter-spacing: 0px;
+  }
+
+  .bis-slider__arrows {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+  }
+
+  .bis-slider__arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 35px;
+    height: 35px;
+    padding: 0;
+    border: 1px solid #D6D3D1;
+    border-radius: 50%;
+    background: #ffffff;
+    color: #1C1917;
+    cursor: pointer;
+    transition: border-color .2s ease, opacity .2s ease;
+  }
+
+  .bis-slider__arrow svg { width: 14px; height: 14px; }
+
+  .bis-slider__arrow:hover { border-color: #111111; }
+  .bis-slider__arrow.is-disabled { opacity: 0.4; cursor: default; pointer-events: none; }
+
+  .bis__media--review picture {
+    height: 100%;
+  }
+
+  .bis-review__body { padding-top: 16px; }
+
+  .bis-review__title {
+    margin: 0;
+    font-weight: 500;
+    font-size: 20px;
+    line-height: 100%;
+    letter-spacing: 0;
+    color: #111111;
+  }
+
+  .bis-review__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin: 4px 0 0;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 100%;
+    color: #4A4A48;
+  }
+
+  .bis-review__sep {
+    width: 1px;
+    height: 12px;
+    margin: 0 8px;
+    background: #BDBDBA;
+  }
+
+  .bis-review__verified {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .bis-review__verified svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .bis-review__text {
+    margin: 8px 0 0;
+    font-size: 18px;
+    line-height: 27px;
+    font-weight: 400;
+    color: #292524;
+  }
+
+  /* Swiper pagination (mobile only) */
+  .bis .swiper-pagination-bullet {
+    width: 6px;
+    height: 6px;
+    background: #111111;
+    opacity: 0.2;
+  }
+
+  .bis .swiper-pagination-bullet-active {
+    background: #111111;
+    opacity: 1;
+  }
+
+  .bis .bis-slider__track .swiper-pagination { display: none; }
+
+  /* Focus */
+  .bis a:focus-visible,
+  .bis button:focus-visible,
+  .bis .bis-gallery__track:focus-visible {
+    outline: 2px solid #111111;
+    outline-offset: 2px;
+  }
+   @media (max-width: 1199px) {
+    .bis__heading {
+      margin: 0 0 10px;
+          font-size: 38px;
+
+    line-height: 42px;
+    }
+    .bis__content p {
+          font-size: 16px;
+    line-height: 22px;
+        margin: 0 0 10px;
+    }
+    .bis__grid {
+      column-gap: 30px;
+    row-gap: 18px;
+    }
+    .bis-review__text {
+      font-size: 16px;
+      line-height: 20px;
+    }
+    .bis-review__meta {
+          font-size: 11px;
+    }
+   }
+
+  /* ───────── Tablet and below (≤ 989px) ───────── */
+  @media (max-width: 991px) {
+        .bis__heading {
+        font-size: 32px;
+        line-height: 34px;
+    }
+    .bis-slider__head {
+          margin-bottom: 10px;
+    }
+    .bis__grid {
+              column-gap: 24px;
+    }
+    .bis-review__text {
+          margin: 6px 0 0;
+
+    }
+  }
+
+  @media (max-width: 767px) {
+    .bis {
+      padding: 24px 0;
+}
+    .bis__grid,
+    .bis__grid--card-left,
+    .bis__grid--card-right,
+    .bis__grid--no-card {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas:
+        'intro'
+        'social'
+        'results';
+    }
+
+    .bis__grid {
+      grid-template-rows: auto;
+      column-gap: 0;
+      row-gap: 24px;
+      align-items: normal;
+    }
+
+    .bis__heading {
+      margin: 0 0 16px;
+      font-size: 32px;
+      line-height: 35px;
+      max-width: 100%;
+    }
+        .bis__content p {
+        font-size: 16px;
+        line-height: 24px;
+        margin: 0 0 16px;
+    }
+
+
+    .bis__rating-link { flex-basis: 100%; }
+
+    .bis-slider__head { margin-bottom: 16px; }
+
+    .bis-slider__arrow {
+      width: 32px;
+      height: 32px;
+    }
+
+    .bis-slider__arrow svg { width: 16px; height: 16px; }
+    .bis-review__meta {
+        font-size: 12px;
+        margin: 6px 0 0;
+    }
+
+
+    .bis .bis-slider__track .swiper-pagination {
+      position: static;
+      width: auto;
+      margin-top: 20px;
+      display: flex;
+      justify-content: flex-start;
+      transform: none;
+      display: none;
+    }
+  }
+    @media (max-width: 575px) {
+      .bis__rating-text {
+            font-size: 11px;
+      }
+    }
+{% endstylesheet %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const sliderElement = document.querySelector('#bis-{{ section.id }} .bis-slider__track');
+
+    if (sliderElement && typeof Swiper !== 'undefined') {
+      const swiper = new Swiper(sliderElement, {
+        slidesPerView: 2.1,
+        spaceBetween: 16,
+
+        pagination: {
+          el: '#bis-{{ section.id }} .swiper-pagination',
+          clickable: true,
+        },
+
+        navigation: {
+          prevEl: '#bis-{{ section.id }} [data-prev]',
+          nextEl: '#bis-{{ section.id }} [data-next]',
+          disabledClass: 'is-disabled',
+        },
+
+        breakpoints: {
+            0: {
+               slidesPerView: 1.1,
+            spaceBetween: 16,
+          },
+          768: {
+            slidesPerView: 1.2,
+            spaceBetween: 16,
+          },
+          991: {
+            slidesPerView: 1.5,
+            spaceBetween: 16,
+          },
+          1024: {
+            slidesPerView: 2.1,
+            spaceBetween: 16,
+          },
+        },
+      });
+    } else {
+      console.error('Swiper library or slider element not found.');
+    }
+  });
+</script>
+
+{% schema %}
+{
+  "name": "Beauty insiders",
+  "tag": "div",
+  "class": "section-wrapper",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Title & content"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Beauty insiders' best-kept secret"
+    },
+    {
+      "type": "select",
+      "id": "heading_tag",
+      "label": "Heading tag",
+      "options": [
+        {
+          "value": "h1",
+          "label": "H1"
+        },
+        {
+          "value": "h2",
+          "label": "H2"
+        },
+        {
+          "value": "h3",
+          "label": "H3"
+        }
+      ],
+      "default": "h2"
+    },
+    {
+      "type": "richtext",
+      "id": "content",
+      "label": "Content",
+      "default": "<p>Praised by Julia Roberts, the original Aduro LED Facial Mask pioneered the medical-grade silicone mask category and inspired countless imitators. Now, a new generation builds on that legacy with advanced multi-program light therapy.</p>"
+    },
+    {
+      "type": "header",
+      "content": "Rating"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_rating",
+      "label": "Show rating",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "rating",
+      "label": "Rating value",
+      "min": 0,
+      "max": 5,
+      "step": 0.1,
+      "default": 4.8
+    },
+    {
+      "type": "text",
+      "id": "rating_text",
+      "label": "Rating text",
+      "default": "Rated 4.8/5 from 1,742 customers"
+    },
+    {
+      "type": "text",
+      "id": "rating_link_label",
+      "label": "Link label",
+      "default": "Read all reviews"
+    },
+    {
+      "type": "url",
+      "id": "rating_link",
+      "label": "Link"
+    },
+    {
+      "type": "header",
+      "content": "Social card"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_social_card",
+      "label": "Show social card",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "card_position",
+      "label": "Card position (desktop)",
+      "options": [
+        {
+          "value": "left",
+          "label": "Left"
+        },
+        {
+          "value": "right",
+          "label": "Right"
+        }
+      ],
+      "default": "left"
+    },
+    {
+      "type": "image_picker",
+      "id": "social_image_desktop",
+      "label": "Image – desktop (single image)",
+      "info": "Used only when no \"Social image\" blocks are added."
+    },
+    {
+      "type": "image_picker",
+      "id": "social_image_mobile",
+      "label": "Image – mobile (single image)",
+      "info": "Used only when no \"Social image\" blocks are added. Falls back to the desktop image."
+    },
+    {
+      "type": "header",
+      "content": "Customer results"
+    },
+    {
+      "type": "text",
+      "id": "results_label",
+      "label": "Label",
+      "default": "Customer results"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_arrows",
+      "label": "Show arrows",
+      "default": true
+    }
+  ],
+  "blocks": [
+    {
+      "type": "social_image",
+      "name": "Social image",
+      "limit": 10,
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image_desktop",
+          "label": "Image – desktop"
+        },
+        {
+          "type": "image_picker",
+          "id": "image_mobile",
+          "label": "Image – mobile",
+          "info": "Optional. Falls back to the desktop image."
+        }
+      ]
+    },
+    {
+      "type": "review",
+      "name": "Customer result",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image_desktop",
+          "label": "Image – desktop"
+        },
+        {
+          "type": "image_picker",
+          "id": "image_mobile",
+          "label": "Image – mobile",
+          "info": "Optional. Falls back to the desktop image."
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Title",
+          "default": "I should buy it sooner"
+        },
+        {
+          "type": "text",
+          "id": "author",
+          "label": "Customer name",
+          "default": "Julia Roberts"
+        },
+        {
+          "type": "checkbox",
+          "id": "show_verified",
+          "label": "Show verified buyer",
+          "default": true
+        },
+        {
+          "type": "text",
+          "id": "verified_label",
+          "label": "Verified label",
+          "default": "Aduro Verified Buyer"
+        },
+        {
+          "type": "textarea",
+          "id": "text",
+          "label": "Text",
+          "default": "The process of skin regeneration in 4 weeks, place holder place holder."
+        }
+      ],
+      "limit": 12
+    }
+  ],
+  "max_blocks": 22,
+  "presets": [
+    {
+      "name": "Beauty insiders",
+      "blocks": [
+        {
+          "type": "review"
+        },
+        {
+          "type": "review"
+        },
+        {
+          "type": "review"
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}
