@@ -13,6 +13,8 @@
   data-trigger="{{ section.settings.trigger }}"
   data-autoplay="{{ section.settings.autoplay }}"
   data-speed="{{ section.settings.autoplay_speed }}"
+  data-offset="{{ section.settings.sticky_offset }}"
+  data-fill="{{ section.settings.fill_screen }}"
 >
   <div class="common-container feature-showcase__inner">
     <div class="feature-showcase__copy">
@@ -131,6 +133,7 @@
     if (tabs.length < 2) return;
 
     var list = root.querySelector('.feature-showcase__statements');
+    var inner = root.querySelector('.feature-showcase__inner');
     var current = 0;
     var timer = null;
     var hoverMode = root.getAttribute('data-trigger') === 'hover';
@@ -138,8 +141,29 @@
     var speed = (parseInt(root.getAttribute('data-speed'), 10) || 4) * 1000;
     var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var canHover = window.matchMedia('(hover: hover)').matches;
+    var isDesignMode = !!(window.Shopify && window.Shopify.designMode);
 
-    if (reduceMotion || (window.Shopify && window.Shopify.designMode)) autoplay = false;
+    if (reduceMotion || isDesignMode) autoplay = false;
+
+    /* ---- Scroll-driven mode (pinned section, scroll = next statement) ---- */
+    var offsetSetting = parseInt(root.getAttribute('data-offset'), 10) || 0;
+    var fillScreen = root.getAttribute('data-fill') !== 'false';
+    var scrollMode = false;
+    var pinMode = 'sticky';  /* 'sticky' first; switches to 'fixed' by itself if sticky is blocked by the theme */
+    var stepPx = 0;          /* scroll distance used for each statement */
+    var travel = 0;          /* total pinned scroll distance */
+    var topOffset = 0;       /* sticky header height */
+    var scroller = null;     /* the element that really scrolls (null = the normal page/window) */
+    var ticking = false;
+    var clipped = [];
+    var SCROLL_QUERY = '(min-width: 768px)';
+    var debug = /[?&]fsdebug=1/.test(window.location.search);
+
+    function log() {
+      if (debug && window.console) {
+        console.log.apply(console, ['[feature-showcase]'].concat(Array.prototype.slice.call(arguments)));
+      }
+    }
 
     function activate(index) {
       current = index;
@@ -161,17 +185,226 @@
     }
 
     function start() {
-      if (!autoplay) return;
+      if (!autoplay || scrollMode) return;
       stop();
       timer = setInterval(function () {
         activate((current + 1) % tabs.length);
       }, speed);
     }
 
+    /* Height of a fixed/sticky header at the top of the page (0 if none) */
+    function getHeaderOffset() {
+      if (offsetSetting > 0) return offsetSetting;
+      var max = 0;
+      var els = document.querySelectorAll('header, [class*="header"], [id*="header"]');
+      for (var i = 0; i < els.length; i++) {
+        var el = els[i];
+        if (root.contains(el)) continue;
+        var cs = window.getComputedStyle(el);
+        if (cs.position !== 'fixed' && cs.position !== 'sticky') continue;
+        var r = el.getBoundingClientRect();
+        if (r.height < 220 && r.width > window.innerWidth * 0.5 && r.bottom > 0) {
+          /* where the bottom edge will sit once the header is stuck to the top */
+          var stuck = (parseFloat(cs.top) || 0) + r.height;
+          max = Math.max(max, stuck);
+        }
+      }
+      return Math.round(max);
+    }
+
+    /* Find what really scrolls the page. Normally the window, but some themes
+       lock the body and scroll a wrapper (or the body itself) instead. */
+    function findScroller() {
+      var el = root.parentElement;
+      while (el && el !== document.body && el !== document.documentElement) {
+        var cs = window.getComputedStyle(el);
+        if (/(auto|scroll)/.test(cs.overflowY) && el.scrollHeight > el.clientHeight + 1) return el;
+        el = el.parentElement;
+      }
+      var b = document.body;
+      var bcs = window.getComputedStyle(b);
+      var se = document.scrollingElement || document.documentElement;
+      if (/(auto|scroll)/.test(bcs.overflowY) && b.scrollHeight > b.clientHeight + 1 &&
+          se.scrollHeight <= window.innerHeight + 1) return b;
+      return null;
+    }
+
+    function viewTop() { return scroller ? scroller.getBoundingClientRect().top : 0; }
+    function viewHeight() { return scroller ? scroller.clientHeight : window.innerHeight; }
+    /* where (in screen pixels) the pinned block sits */
+    function pinLine() { return Math.max(viewTop(), topOffset); }
+
+    /* position: sticky stops working if a parent has overflow hidden/auto.
+       "clip" looks the same but keeps sticky working.
+       Never touches the element that really scrolls, or scrolling would break. */
+    function freeSticky() {
+      if (clipped.length) return;
+      var el = inner.parentElement;
+      while (el && el !== scroller && el !== document.body && el !== document.documentElement) {
+        var cs = window.getComputedStyle(el);
+        if (/(hidden|auto|scroll)/.test(cs.overflow + ' ' + cs.overflowX + ' ' + cs.overflowY)) {
+          clipped.push({ el: el, value: el.style.overflow });
+          el.style.overflow = 'clip';
+        }
+        el = el.parentElement;
+      }
+    }
+
+    function restoreOverflow() {
+      clipped.forEach(function (c) { c.el.style.overflow = c.value; });
+      clipped = [];
+    }
+
+    function resetInlinePin() {
+      inner.style.position = '';
+      inner.style.top = '';
+      inner.style.bottom = '';
+      inner.style.left = '';
+      inner.style.right = '';
+      inner.style.marginLeft = '';
+      inner.style.marginRight = '';
+    }
+
+    /* Fallback pin (used only if the theme blocks position: sticky) */
+    function applyFixed(scrolled) {
+      var rect = root.getBoundingClientRect();
+      if (scrolled <= 0) {
+        resetInlinePin();
+      } else if (scrolled >= travel) {
+        inner.style.position = 'absolute';
+        inner.style.top = 'auto';
+        inner.style.bottom = '0';
+        inner.style.left = '0';
+        inner.style.right = '0';
+        inner.style.marginLeft = 'auto';
+        inner.style.marginRight = 'auto';
+      } else {
+        inner.style.position = 'fixed';
+        inner.style.top = pinLine() + 'px';
+        inner.style.bottom = 'auto';
+        inner.style.left = rect.left + 'px';
+        inner.style.right = (document.documentElement.clientWidth - rect.right) + 'px';
+        inner.style.marginLeft = 'auto';
+        inner.style.marginRight = 'auto';
+      }
+    }
+
+    function measure() {
+      scroller = findScroller();
+      topOffset = getHeaderOffset();
+      root.style.setProperty('--fs-top', Math.max(0, pinLine() - viewTop()) + 'px');
+      root.classList.remove('is-fit');
+      inner.style.height = '';
+      resetInlinePin();
+
+      var natural = inner.offsetHeight;
+      var available = viewHeight() - (pinLine() - viewTop());
+      var pinned = natural;
+
+      /* Fill the screen while pinned (no empty gap under the block), and also
+         shrink it if it is taller than the screen so the statements stay visible */
+      if (fillScreen || natural > available) {
+        pinned = available;
+        root.classList.add('is-fit');
+        inner.style.height = available + 'px';
+      }
+
+      /* one statement per ~60% of the screen height of scrolling (+ a short hold on the last one) */
+      stepPx = Math.round(viewHeight() * 0.6);
+      travel = stepPx * (tabs.length - 1) + Math.round(stepPx * 0.5);
+      root.style.height = (pinned + travel) + 'px';
+      log('measured', { topOffset: topOffset, pinned: pinned, step: stepPx, travel: travel, mode: pinMode });
+    }
+
+    function update() {
+      var line = pinLine();
+      var scrolled = line - root.getBoundingClientRect().top;
+      var index = Math.floor(scrolled / stepPx);
+      index = Math.max(0, Math.min(tabs.length - 1, index));
+      if (index !== current) { activate(index); log('statement', index); }
+
+      if (pinMode === 'fixed') {
+        applyFixed(scrolled);
+      } else if (scrolled > 24 && scrolled < travel - 24) {
+        /* sticky should hold the block at topOffset - if not, the theme is blocking it */
+        if (Math.abs(inner.getBoundingClientRect().top - line) > 3) {
+          log('sticky is blocked by the theme, switching to fixed fallback');
+          pinMode = 'fixed';
+          root.classList.add('is-fixed-mode');
+          applyFixed(scrolled);
+        }
+      }
+    }
+
+    function onScroll() {
+      if (!root.isConnected) {
+        window.removeEventListener('scroll', onScroll, true);
+        window.removeEventListener('resize', checkMode);
+        return;
+      }
+      if (!scrollMode || ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(function () {
+        ticking = false;
+        update();
+      });
+    }
+
+    function goTo(n, instant) {
+      if (scrollMode) {
+        /* move the page so the scroll position matches this statement */
+        var delta = root.getBoundingClientRect().top - pinLine() + n * stepPx + 2;
+        var opts = { behavior: (reduceMotion || instant) ? 'auto' : 'smooth' };
+        if (scroller) {
+          opts.top = scroller.scrollTop + delta;
+          scroller.scrollTo(opts);
+        } else {
+          opts.top = window.pageYOffset + delta;
+          window.scrollTo(opts);
+        }
+      } else {
+        activate(n);
+      }
+    }
+
+    function enableScrollMode() {
+      if (!scrollMode) {
+        scrollMode = true;
+        stop();
+        root.classList.add('is-scroll-mode');
+        scroller = findScroller();  /* must be known BEFORE freeSticky so a real scroller is never clipped */
+        freeSticky();
+      }
+      measure();
+      update();
+    }
+
+    function disableScrollMode() {
+      if (!scrollMode) return;
+      scrollMode = false;
+      pinMode = 'sticky';
+      scroller = null;
+      root.classList.remove('is-scroll-mode', 'is-fit', 'is-fixed-mode');
+      root.style.height = '';
+      inner.style.height = '';
+      resetInlinePin();
+      restoreOverflow();
+      activate(0);
+      start();
+    }
+
+    function checkMode() {
+      if (window.matchMedia(SCROLL_QUERY).matches) {
+        enableScrollMode();
+      } else {
+        disableScrollMode();
+      }
+    }
+
     tabs.forEach(function (tab, n) {
-      tab.addEventListener('click', function () { activate(n); });
+      tab.addEventListener('click', function () { goTo(n); });
       if (hoverMode && canHover) {
-        tab.addEventListener('mouseenter', function () { activate(n); });
+        tab.addEventListener('mouseenter', function () { if (!scrollMode) activate(n); });
       }
     });
 
@@ -180,7 +413,7 @@
       if (!step) return;
       e.preventDefault();
       var next = (current + step + tabs.length) % tabs.length;
-      activate(next);
+      goTo(next);
       tabs[next].focus();
     });
 
@@ -189,17 +422,28 @@
     root.addEventListener('focusin', stop);
     root.addEventListener('focusout', start);
 
-    /* Theme editor: selecting a block shows its image */
+    /* capture = true so scrolling of a wrapper element (not just the window) is noticed too */
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', checkMode);
+    window.addEventListener('load', function () { if (scrollMode) { measure(); update(); } });
+
+    /* Theme editor: selecting a block jumps to its statement + image */
     function onBlockSelect(e) {
       if (!root.isConnected) {
         document.removeEventListener('shopify:block:select', onBlockSelect);
         return;
       }
       var i = tabs.indexOf(e.target);
-      if (i > -1) activate(i);
+      if (i > -1) goTo(i, true);
     }
     document.addEventListener('shopify:block:select', onBlockSelect);
 
+    try {
+      checkMode();
+    } catch (err) {
+      log('scroll mode failed, using normal mode', err);
+      disableScrollMode();
+    }
     start();
   })();
 </script>
@@ -299,6 +543,34 @@
     object-fit: cover;
     object-position: center center;
   }
+
+  /* Scroll-driven mode: the section stays pinned while the user scrolls,
+     and each scroll step switches to the next statement + image.
+     Height of the section is set by JS. Only active on screens >= 768px. */
+  .feature-showcase.is-scroll-mode .feature-showcase__inner {
+    position: sticky;
+    top: var(--fs-top, 0px);
+  }
+
+  /* Fallback if the theme blocks sticky: JS pins the block instead */
+  .feature-showcase.is-scroll-mode.is-fixed-mode {
+    position: relative;
+  }
+  .feature-showcase.is-scroll-mode.is-fixed-mode .feature-showcase__inner {
+    position: static;
+  }
+
+  /* Only used when the section is taller than the screen */
+  .feature-showcase.is-fit .feature-showcase__inner {
+    box-sizing: border-box;
+  }
+  .feature-showcase.is-fit .feature-showcase__media,
+  .feature-showcase.is-fit .feature-showcase__panel.is-active {
+    height: 100%;
+  }
+  .feature-showcase.is-fit .feature-showcase__media {
+    overflow: hidden;
+  }
 @media screen and (max-width: 1199px) {
     .feature-showcase__line {
         font-size: 42px;
@@ -385,6 +657,22 @@
         { "value": "hover", "label": "Hover (desktop) + click" }
       ],
       "default": "click"
+    },
+    {
+      "type": "range",
+      "id": "sticky_offset",
+      "label": "Sticky header height (0 = auto detect)",
+      "min": 0,
+      "max": 200,
+      "step": 4,
+      "unit": "px",
+      "default": 0
+    },
+    {
+      "type": "checkbox",
+      "id": "fill_screen",
+      "label": "Fill screen height while scrolling (removes empty gap below)",
+      "default": true
     },
     {
       "type": "checkbox",
